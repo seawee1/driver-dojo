@@ -1,0 +1,59 @@
+minGap; normal(2.0,1.0); [0.5, 3.0]
+minGapLat; normal(0.3,0.1); [0.05, 0.5]
+length; normal(4.5,1.0); [3.5,6.0]
+width; uniform(1.5, 1.7)
+vClass; passenger
+departLane; best
+departPos; base
+departSpeed; random
+speedFactor; normal(1.0, 0.3); [0.7, 1.3]
+accel; normal(2.5, 2.0); [2.0,4.0]
+decel; normal(2.5, 2.0); [2.0,4.0]
+emergencyDecel; normal(2.5, 2.0); [3.0, 5.0]
+tau; normal(1.0, 0.5); [0.25, 2.0]
+impatience; normal(0.2,0.05); [0.1,0.3]
+latAlignment; arbitrary
+
+carFollowModel; EIDM
+stepping; 1.0
+tpreview; normal(4.00,1.0); [2.0,6.0]
+tPersDrive; normal(3.00,1.0); [1.0,5.0]
+tPersEstimate; normal(8.00,1.0); [6.0,10.0]
+treaction; 0.5
+ccoolness; 0.99
+sigmaleader; uniform(0.01, 0.2)
+sigmagap; uniform(0.01, 0.3)
+sigmaerror; uniform(0.01, 0.3)
+jerkmax; 3.0
+epsilonacc; 1.0
+taccmax; 1.2
+Mflatness; 2.0
+Mbegin; 0.7
+maxvehpreview; 0
+vehdynamics; 0
+
+lcStrategic; uniform(0.0, 3.0)
+lcCooperative; uniform(0.0, 1.0)
+lcSpeedGain; uniform(0.0, 3.0)
+lcKeepRight; uniform(0.0, 3.0)
+lcOvertakeRight; 0.01
+lcOpposite; uniform(0.0, 3.0)
+lcLookaheadLeft; 2.0
+lcSpeedGainRight; 1.0
+lcSpeedGainLookahead; uniform(0.0, 5.0)
+lcSublane; uniform(0.0, 1.0)
+lcPushy; uniform(0.0, 3.0)
+lcAssertive; uniform(0.0, 3.0)
+lcImpatience; 0.0
+lcAccelLat; uniform(1.0, 3.0)
+lcMaxSpeedLatStanding; 0.1
+lcMaxDistLatStanding; 1.6
+lcLaneDiscipline; 0.0
+lcSigma; uniform(0.0, 0.5)
+
+jmIgnoreKeepClearTime; uniform(5.0, 15.0)
+jmIgnoreFoeProb; normal(0.1, 0.1); [0.0, 0.3]
+jmIgnoreFoeSpeed; normal(8.333, 1.0); [6.0, 11.0]
+jmSigmaMinor; uniform(0.0, 0.3)
+jmStoplineGap; uniform(0.0, 2.0)
+jmTimeGapMinor; normal(1.0, 1.0); [0.0, 2.0]

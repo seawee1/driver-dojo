@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2022-04-11 14:42:17 by Eclipse SUMO netedit Version 1.12.0
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <flow id="f_0" begin="0.00" from="E39" to="E38" via="E37" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_1" begin="0.00" color="red" from="E3" to="E3" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_10" begin="0.00" color="orange" from="E10" to="E13" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_11" begin="0.00" color="white" from="E14" to="E14" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_12" begin="0.00" color="white" from="E16" to="E16" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_13" begin="0.00" color="white" from="E17" to="E17" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_14" begin="0.00" from="E37" to="E38" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_15" begin="0.00" from="E38" to="E37" via="E39" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_16" begin="0.00" from="E18" to="E18" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_17" begin="0.00" from="E20" to="E20" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_18" begin="0.00" from="E19" to="E20" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_19" begin="0.00" color="red" from="E36" to="E33" via="E35 E34" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_2" begin="0.00" color="red" from="E5" to="E5" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_20" begin="0.00" color="red" from="E34" to="E33" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_21" begin="0.00" color="green" from="E25" to="E28" via="E26 E27" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_22" begin="0.00" color="green" from="E27" to="E27" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_23" begin="0.00" color="blue" from="E32" to="E31" via="E29 E30" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_24" begin="0.00" color="blue" from="E30" to="E29" via="E31" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_3" begin="0.00" color="red" from="E6" to="E6" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_4" begin="0.00" color="green" from="E7" to="E7" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_5" begin="0.00" color="blue" from="E8" to="E8" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_6" begin="0.00" color="blue" from="E9" to="E9" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_7" begin="0.00" color="orange" from="E11" to="E11" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_8" begin="0.00" color="orange" from="E12" to="E12" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_9" begin="0.00" color="orange" from="E10" to="E10.32" end="3600.00" vehsPerHour="1800.00"/>
+</routes>

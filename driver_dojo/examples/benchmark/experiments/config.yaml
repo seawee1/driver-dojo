@@ -1,0 +1,8 @@
+defaults:
+  - algo: dqn_numeric
+  - env_train: train_10000_0
+  - env_test: default
+  - obs: default
+  - _self_
+
+env_name: "DriverDojo/Sem-TPS-HighwayExit-v0"

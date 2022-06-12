@@ -1,0 +1,32 @@
+name: "dqn"
+params:
+    is_double: True
+    eps_train: 1.0
+    eps_test: 0.001
+    eps_fraction: 0.2
+    buffer_size: 100000
+    lr: 0.0003
+    gamma: 0.99
+    n_step: 3
+    target_update_freq: 1000
+    epoch: 100
+    step_per_epoch: 100000
+    step_per_collect: 8
+    update_per_step: 0.125
+    batch_size: 64
+    hidden_sizes:
+        - 256
+        - 256
+    dueling_q_hidden_sizes:
+        - 256
+        - 256
+    dueling_v_hidden_sizes:
+        - 256
+        - 256
+    prioritized_replay: False
+    alpha: 0.6
+    beta: 0.4
+    training_num: 8
+    test_num: 50
+    device: "cpu"
+    seed: 1337
