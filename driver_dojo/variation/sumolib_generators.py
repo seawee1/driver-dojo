@@ -132,42 +132,11 @@ def build_edge(e_id, n1, n2, numLanes, lanes, maxSpeed=13.333):
     return e
 
 
-def create_roundabout():
+def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, road_cs, lengths, squeeze):
     defaultEdge = Edge(numLanes=2, maxSpeed=13.0)
     net = Net(None, defaultEdge)
 
-    radius = state_variables.np_random_maps.uniform(20.0, 40.0)
-
-    num_incident = state_variables.np_random_maps.randint(2, 6)
-    incident_std = 0.2
-    angle_mean = 0.0
-    angle_std = 0.15
-    squeeze = [
-        state_variables.np_random_maps.uniform(0.8, 1.2),
-        state_variables.np_random_maps.uniform(0.8, 1.2),
-    ]
     perturb_std = 0.005
-    num_lanes = [
-        [
-            state_variables.np_random_maps.randint(1, 3),
-            state_variables.np_random_maps.randint(1, 3),
-        ]
-        for _ in range(num_incident)
-    ]
-    internal_lanes = state_variables.np_random_maps.randint(1, 3)
-    lengths = [
-        state_variables.np_random_maps.randint(60, 100) for i in range(num_incident)
-    ]
-    rads = [
-        i * 2 * np.pi / num_incident
-        + state_variables.np_random_maps.normal(0.0, incident_std)
-        for i in range(num_incident)
-    ]
-    angles = [
-        state_variables.np_random_maps.normal(angle_mean, angle_std)
-        for i in range(num_incident)
-    ]
-
     nodes = []
 
     def sample_arc(rad_a, rad_b):
@@ -193,7 +162,7 @@ def create_roundabout():
 
         return xs, ys
 
-    for i, rad in enumerate(rads):
+    for i, rad in enumerate(rads_incident):
         x = radius * np.cos(rad)
         y = radius * np.sin(rad)
         x *= squeeze[0]
@@ -219,18 +188,17 @@ def create_roundabout():
         A method to initialize a Clothoid given a starting point, starting tangent, starting curvature,
         curvature rate, and final length.
         """
-        # clothoid0 = Clothoid.G1Hermite(nodes[i].x, nodes[i].y, rads[i], 1, 1, 0)
-        k = state_variables.np_random_maps.uniform(-0.0002, 0.0002)
+        # clothoid0 = Clothoid.G1Hermite(nodes[i].x, nodes[i].y, rads_incident[i], 1, 1, 0)
         clothoid = Clothoid.StandardParams(
-            nodes[i].x, nodes[i].y, rads[i] + angles[i], k, k, lengths[i]
+            nodes[i].x, nodes[i].y, rads_incident[i] + angles[i], road_cs[i], road_cs[i], lengths[i]
         )
         xs, ys = clothoid.SampleXY(500)
 
         xs = [x * squeeze[0] for x in xs]
         ys = [y * squeeze[1] for y in ys]
 
-        # x = (radius + lengths[i]) * np.cos(rads[i] + angles[i])
-        # y = (radius + lengths[i]) * np.sin(rads[i] + angles[i])
+        # x = (radius + lengths[i]) * np.cos(rads_incident[i] + angles[i])
+        # y = (radius + lengths[i]) * np.sin(rads_incident[i] + angles[i])
 
         x = xs[-1]
         y = ys[-1]
@@ -260,11 +228,44 @@ def create_roundabout():
 
     for i, e in enumerate(edges):
         j = i + 1
-        if j == len(rads):
+        if j == len(rads_incident):
             j = 0
 
-        xs, ys = sample_arc(rads[i], rads[j])
+        xs, ys = sample_arc(rads_incident[i], rads_incident[j])
         e.shapes = [f"{x},{y}" for x, y in zip(xs, ys)]
         e.shapes = " ".join(e.shapes)
 
     build(net, netName=state_variables.config.simulation.net_path)
+
+
+def RoundaboutSample():
+    radius = state_variables.np_random_maps.uniform(20.0, 40.0)
+    num_incident = state_variables.np_random_maps.randint(2, 6)
+    num_lanes = [
+        [
+            state_variables.np_random_maps.randint(1, 3),
+            state_variables.np_random_maps.randint(1, 3),
+        ]
+        for _ in range(num_incident)
+    ]
+    angle_mean = 0.0
+    angle_std = 0.15
+    angles = [
+        state_variables.np_random_maps.normal(angle_mean, angle_std)
+        for i in range(num_incident)
+    ]
+    incident_std = 0.1
+    rads_incident = [
+        i * 2 * np.pi / num_incident
+        + state_variables.np_random_maps.normal(0.0, incident_std)
+        for i in range(num_incident)
+    ]
+    internal_lanes = state_variables.np_random_maps.randint(1, 3)
+    lengths = [
+        state_variables.np_random_maps.randint(60, 100) for i in range(num_incident)
+    ]
+    squeeze = [
+        state_variables.np_random_maps.uniform(0.8, 1.2),
+        state_variables.np_random_maps.uniform(0.8, 1.2),
+    ]
+    road_cs = state_variables.np_random_maps.uniform(-0.0002, 0.0002)

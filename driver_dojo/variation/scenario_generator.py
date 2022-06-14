@@ -15,13 +15,11 @@ from driver_dojo.variation import (
     create_highway_entry,
     create_highway_drive,
     create_highway_exit,
-    HighwayEntrySample,
-    HighwaySample,
-    HighwayDriveSample,
+    HighwaySample
 )
 from scenariogeneration import xodr
 from driver_dojo.navigation.sumo_map import parse_route
-from driver_dojo.variation.sumolib_generators import create_roundabout
+from driver_dojo.variation.sumolib_generators import create_roundabout, RoundaboutSample
 
 
 def kill(proc_pid):
@@ -156,7 +154,8 @@ class ScenarioGenerator:
             j = None
             # Roundabout
             if road_segment == types.GeneratableRoad.Roundabout:
-                create_roundabout()
+                sample = RoundaboutSample()
+                create_roundabout(sample.radius, sample.num_lanes, sample.internal_lanes, sample.rad_incident, sample.angles, sample.road_cs, sample.lengths, sample.squeeze)
                 r = []
                 j = []
             # Generate intersection

@@ -1,5 +1,6 @@
 import yaml
 import scipy
+import scipy.stats
 import numpy as np
 
 
@@ -22,6 +23,34 @@ class DotDict(dict):
             raise AttributeError from e
         __setattr__ = dict.__setitem__
         __delattr__ = dict.__delitem__
+
+
+def plot_categorical(ax, name, ps, val):
+    # For now, use only ps that are 0.05 multiplications
+    x = []
+    for i, p in enumerate(ps):
+        num = int(p*20)
+        x += [val] * num
+
+    ax.bar(val, ps, width=1, edgecolor='black')
+
+    ax.axvline(x=0,
+               color='black',
+               ls='-',
+               lw=0,
+               label='$p(x = i)$')
+    leg = ax.legend(handlelength=0, handletextpad=0, fancybox=True, loc='upper right')
+    for item in leg.legendHandles:
+        item.set_visible(False)
+
+    ax.set_xlim(min(val) - 0.5, max(val) + 0.5)
+    ax.set_ylim(0, max(ps) + 0.1)
+    ax.set_xticks(val)
+    ax.grid(axis='y')
+    ax.set_axisbelow(True)
+    ax.set_aspect(1.0 / ax.get_data_ratio(), adjustable='box')
+    ax.set_title(name)
+    return ax
 
 
 def plot_normal(ax, name, mu, std, clip):
@@ -58,7 +87,7 @@ def plot_normal(ax, name, mu, std, clip):
     ax.set_xlim(mu - 3 * std, mu + 3 * std)
     ax.set_ylim(0, max(y) + max(y) / 10.0)
     ax.set_xticks([round(mu - 2 * std, 1), round(mu, 1), round(mu + 2 * std, 1)])
-    ax.set_yticks([0.0, round(max(y)/2.0, 1), round(max(y) + max(y)/10.0, 1)])
+    ax.set_yticks([0.0, round(max(y) / 2.0, 1), round(max(y) + max(y) / 10.0, 1)])
     ax.set_aspect(1.0 / ax.get_data_ratio(), adjustable='box')
     ax.set_title(name)
     return ax
@@ -84,8 +113,8 @@ def plot_uniform(ax, name, mi, ma):
 
     ax.set_xlim(mi - span / 5, ma + span / 5)
     ax.set_ylim(0, max(y) + max(y) / 10.0)
-    ax.set_xticks([round(mi, 1), round(mi + span / 2, 1), round(ma, 1)])
-    ax.set_yticks([0.0, round(max(y)/2.0, 1), round(max(y) + max(y)/10.0, 1)])
+    ax.set_xticks([mi, mi + span / 2, ma])
+    #ax.set_yticks([0.0, round(max(y) / 2.0, 2), round(max(y) + max(y) / 10.0, 2)])
     ax.set_aspect(1.0 / ax.get_data_ratio(), adjustable='box')
     ax.set_title(name)
     return ax

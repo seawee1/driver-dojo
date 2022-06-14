@@ -646,7 +646,7 @@ class JunctionSample:
         ]
         self.angles = [
             np.radians(
-                i * 360 / self.n_roads
+                i * 365 / self.n_roads
                 + state_variables.np_random_maps.randint(
                     -250.0 / self.n_roads / 2.0, 250.0 / self.n_roads / 2.0
                 )
