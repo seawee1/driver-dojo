@@ -15,15 +15,15 @@ impatience; normal(0.2,0.05); [0.1,0.3]
 latAlignment; arbitrary
 
 carFollowModel; EIDM
-stepping; 1.0
 tpreview; normal(4.00,1.0); [2.0,6.0]
 tPersDrive; normal(3.00,1.0); [1.0,5.0]
 tPersEstimate; normal(8.00,1.0); [6.0,10.0]
-treaction; 0.5
-ccoolness; 0.99
 sigmaleader; uniform(0.01, 0.2)
 sigmagap; uniform(0.01, 0.3)
 sigmaerror; uniform(0.01, 0.3)
+stepping; 1.0
+treaction; 0.5
+ccoolness; 0.99
 jerkmax; 3.0
 epsilonacc; 1.0
 taccmax; 1.2
@@ -36,20 +36,20 @@ lcStrategic; uniform(0.0, 3.0)
 lcCooperative; uniform(0.0, 1.0)
 lcSpeedGain; uniform(0.0, 3.0)
 lcKeepRight; uniform(0.0, 3.0)
-lcOvertakeRight; 0.01
 lcOpposite; uniform(0.0, 3.0)
-lcLookaheadLeft; 2.0
-lcSpeedGainRight; 1.0
 lcSpeedGainLookahead; uniform(0.0, 5.0)
 lcSublane; uniform(0.0, 1.0)
 lcPushy; uniform(0.0, 3.0)
 lcAssertive; uniform(0.0, 3.0)
-lcImpatience; 0.0
 lcAccelLat; uniform(1.0, 3.0)
+lcSigma; uniform(0.0, 0.5)
 lcMaxSpeedLatStanding; 0.1
 lcMaxDistLatStanding; 1.6
+lcOvertakeRight; 0.01
+lcLookaheadLeft; 2.0
+lcSpeedGainRight; 1.0
+lcImpatience; 0.0
 lcLaneDiscipline; 0.0
-lcSigma; uniform(0.0, 0.5)
 
 jmIgnoreKeepClearTime; uniform(5.0, 15.0)
 jmIgnoreFoeProb; normal(0.1, 0.1); [0.0, 0.3]
