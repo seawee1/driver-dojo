@@ -116,7 +116,7 @@ if __name__ == "__main__":
     from omegaconf import OmegaConf
 
     conf = OmegaConf.from_cli()
-    if "env_name" in conf:
+    if "env" in conf:
         env_name = conf.env
         del conf.env
     else:
