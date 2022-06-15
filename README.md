@@ -95,8 +95,14 @@ We use Tianshou and Hydra for our benchmark code base. Run:
 python -m driver_dojo.examples.benchmark hydra.job.chdir=True algo=ppo_numeric obs=default env_name="DriverDojo/Sem-TPS-Intersection-v0"
 ```
 to train PPO on the intersection environment. This will create a subfolder inside ```output``` in which Tensorboard logs and model checkpoints will be placed.
-
 Similarly, as shown above, this allows us to overwrite every configurable parameter from the outside, e.g. ```++env_train.simulation.dt=0.05``` will change the simulation time resolution of the training environment to 50ms.
 
+#### Reproducing our Paper Experiments
+For the results of our paper, we used ```env_train=train_x_0``` and ```env_train=train_x_1```, where ```x``` is the number of scenario constellations used for the respective experiment. For seeding of the RL method, we used seeds ```1337``` and ```1338```.
 ## Third-party Components
 Besides [SUMO](https://www.eclipse.org/sumo/) and [Carla](https://carla.org/), we thank the authors of [Hydra](https://github.com/facebookresearch/hydra), [Tianshou](https://github.com/thu-ml/tianshou), [scenariogeneration](https://github.com/pyoscx/scenariogeneration) and [commonroad-vehicle-models](https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models), without which this project in its current form would not have been possible.
+
+## License
+This project is licensed under the [License for Academic Use of Fraunhofer Software, Version 2.0](LICENSE.txt).
+
+For licenses of source code of third-party Open-Source projects directly included inside our repository, have a look at the [3rd-party-licences.md](3rd-party-licenses.md) file.
