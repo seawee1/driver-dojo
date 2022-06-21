@@ -30,7 +30,6 @@ class MultiObserver:
         # Sort our observer into 'image' and 'vector' observer buckets
         for observer in observers:
             if len(observer.observation_space.shape) > 1:
-                print("Visual Observer")
                 self.observation_members["image"].append(observer)
             else:
                 self.observation_members["vector"].append(observer)

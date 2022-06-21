@@ -29,7 +29,6 @@ def train_dqn(
     args = algo_config
     # Create probe, train and test environments
     training_num, test_num = algo_config.training_num, algo_config.test_num
-    print("make")
     env, train_envs, test_envs = make_envs(
         env_name,
         train_config,
@@ -39,8 +38,6 @@ def train_dqn(
         evaluate=evaluate,
         on_test_set=on_test_set,
     )
-
-    print("make_after")
 
     # Probe the environment and close
     state_shape = env.observation_space.shape or env.observation_space.n

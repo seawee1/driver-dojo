@@ -8,21 +8,22 @@ import matplotlib.pyplot as plt
 
 from driver_dojo.common.utils import lane_to_polygon
 
+
 # This is an adapted version of driver_dojo.common.utils.net_to_polygon
 def net_to_polygons(
-    net,
-    fuse_lanes=True,
-    fuse_all=False,
-    debug_plt=False,
-    with_internal=True,
-    show=False,
+        net,
+        fuse_lanes=True,
+        fuse_all=False,
+        debug_plt=False,
+        with_internal=True,
+        show=False,
 ):
     fig = plt.figure(figsize=(20, 20))
     # fig.set_dpi(300)
     ax = fig.add_subplot(111)
 
     # Edges first
-    edges = net.getEdges(withInternal=False)
+    edges = net.getEdges(withInternal=True)
     polys = []
     for i, e in enumerate(edges):
         # Get all the lanes of an edge
@@ -56,10 +57,10 @@ def net_to_polygons(
     # Fuse into one polygon
     if fuse_all:
         # Dilate each lane polygon by 1 meter
-        polys = [poly.buffer(1) for poly in polys if poly.is_valid]
+        polys = [poly.buffer(2) for poly in polys if poly.is_valid]
         # Fuse all lanes into one polygon
         polys = [unary_union(polys)]
-        polys = [poly.buffer(-1) for poly in polys if poly.is_valid]
+        polys = [poly.buffer(-2) for poly in polys if poly.is_valid]
 
     # Plot the street network polygons
     for p in polys:

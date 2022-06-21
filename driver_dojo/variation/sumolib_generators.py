@@ -238,34 +238,35 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
     build(net, netName=state_variables.config.simulation.net_path)
 
 
-def RoundaboutSample():
-    radius = state_variables.np_random_maps.uniform(20.0, 40.0)
-    num_incident = state_variables.np_random_maps.randint(2, 6)
-    num_lanes = [
-        [
-            state_variables.np_random_maps.randint(1, 3),
-            state_variables.np_random_maps.randint(1, 3),
+class RoundaboutSample:
+    def __init__(self):
+        self.radius = state_variables.np_random_maps.uniform(20.0, 40.0)
+        self.num_incident = state_variables.np_random_maps.randint(2, 6)
+        self.num_lanes = [
+            [
+                state_variables.np_random_maps.randint(1, 3),
+                state_variables.np_random_maps.randint(1, 3),
+            ]
+            for _ in range(self.num_incident)
         ]
-        for _ in range(num_incident)
-    ]
-    angle_mean = 0.0
-    angle_std = 0.15
-    angles = [
-        state_variables.np_random_maps.normal(angle_mean, angle_std)
-        for i in range(num_incident)
-    ]
-    incident_std = 0.1
-    rads_incident = [
-        i * 2 * np.pi / num_incident
-        + state_variables.np_random_maps.normal(0.0, incident_std)
-        for i in range(num_incident)
-    ]
-    internal_lanes = state_variables.np_random_maps.randint(1, 3)
-    lengths = [
-        state_variables.np_random_maps.randint(60, 100) for i in range(num_incident)
-    ]
-    squeeze = [
-        state_variables.np_random_maps.uniform(0.8, 1.2),
-        state_variables.np_random_maps.uniform(0.8, 1.2),
-    ]
-    road_cs = state_variables.np_random_maps.uniform(-0.0002, 0.0002)
+        angle_mean = 0.0
+        angle_std = 0.15
+        self.angles = [
+            state_variables.np_random_maps.normal(angle_mean, angle_std)
+            for i in range(self.num_incident)
+        ]
+        incident_std = 0.1
+        self.rads_incident = [
+            i * 2 * np.pi / self.num_incident
+            + state_variables.np_random_maps.normal(0.0, incident_std)
+            for i in range(self.num_incident)
+        ]
+        self.internal_lanes = state_variables.np_random_maps.randint(1, 3)
+        self.lengths = [
+            state_variables.np_random_maps.randint(60, 100) for i in range(self.num_incident)
+        ]
+        self.squeeze = [
+            state_variables.np_random_maps.uniform(0.8, 1.2),
+            state_variables.np_random_maps.uniform(0.8, 1.2),
+        ]
+        self.road_cs = [state_variables.np_random_maps.uniform(-0.0002, 0.0002) for i in range(self.num_incident)]

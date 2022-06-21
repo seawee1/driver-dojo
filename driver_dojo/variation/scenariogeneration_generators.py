@@ -65,9 +65,13 @@ def create_road_start(
     # create lanesections
     lanesec = LaneSection(0, standard_lane())
     for i in range(n_lanes[0]):
-        lanesec.add_left_lane(standard_lane(lane_offset))
+        lane = standard_lane(lane_offset)
+        lane.add_roadmark(xodr.STD_ROADMARK_BROKEN)
+        lanesec.add_left_lane(lane)
     for i in range(n_lanes[1]):
-        lanesec.add_right_lane(standard_lane(lane_offset))
+        lane = standard_lane(lane_offset)
+        lane.add_roadmark(xodr.STD_ROADMARK_SOLID)
+        lanesec.add_right_lane(lane)
 
     # create lanes
     lanes = Lanes()

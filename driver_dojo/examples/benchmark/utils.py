@@ -21,7 +21,6 @@ def preprocess_fn(**kwargs):
 
     if reset:
         if not first_run:
-            print(f"Reset {resets}")
             results.append(
                 f"{eps_rew},{collision},{off_route},{arrived_at_goal},{time_step}\n"
             )

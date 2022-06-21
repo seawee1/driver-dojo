@@ -81,7 +81,6 @@ if __name__ == "__main__":
             clip = None
 
             if check_dist_string(dist) == 'string':
-                print(category_names[c], name, dist)
                 continue
 
             if len(split) == 3:

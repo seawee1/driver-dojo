@@ -110,6 +110,7 @@ def _init_seeding():
 def _seed(seed=None):
     if not seed:
         seed = state_variables.np_random.randint(13371337)
+
     state_variables.np_random, state_variables.level_seed = seeding.np_random(seed)
 
     # Map generation seeding
@@ -423,7 +424,6 @@ class DriverDojoEnv(gym.Env):
         else:
             edgeIDs_goal = edgeIDs
 
-        print(edgeIDs_goal)
 
         for edgeID, num in edges_num_vehicles.items():
             if edgeID in exclude_edgeIDs:

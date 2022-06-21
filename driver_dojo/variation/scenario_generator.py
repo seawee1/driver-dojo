@@ -61,11 +61,6 @@ class ScenarioGenerator:
                 state_variables.config.simulation.net_path,
                 os.path.join(store_path, f"{state_variables.episode_count}.net.xml"),
             )
-            print(
-                os.path.abspath(
-                    os.path.join(store_path, f"{state_variables.episode_count}.net.xml")
-                )
-            ),
             xodr_path = pjoin(
                 state_variables.temp_path, f"{state_variables.sumo_label}.xodr"
             )
@@ -155,7 +150,7 @@ class ScenarioGenerator:
             # Roundabout
             if road_segment == types.GeneratableRoad.Roundabout:
                 sample = RoundaboutSample()
-                create_roundabout(sample.radius, sample.num_lanes, sample.internal_lanes, sample.rad_incident, sample.angles, sample.road_cs, sample.lengths, sample.squeeze)
+                create_roundabout(sample.radius, sample.num_lanes, sample.internal_lanes, sample.rads_incident, sample.angles, sample.road_cs, sample.lengths, sample.squeeze)
                 r = []
                 j = []
             # Generate intersection

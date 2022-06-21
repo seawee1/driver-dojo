@@ -48,15 +48,15 @@ cp -r sumo/tools/* driver-dojo/tools/
 The easiest way to test your installation is to run:
 
 ```bash
-python -m driver_dojo.examples.benchmark_performance [env_name=...] [subconfig.value=...]
+python -m driver_dojo.examples.performance_benchmark [env=...] [subconfig.value=...]
 ```
 
-where you can additionally pass the name of the environment you would like to test out via ```env_name=...``` and as many configuration parameters as you would like, e.g. ```simulation.dt=0.1```. Have a look at the [config.py](driver_dojo/core/config.py) to get an overview.
+where you can additionally pass the name of the environment you would like to test out via ```env=...``` and as many configuration parameters as you would like, e.g. ```simulation.dt=0.1```. Have a look at the [config.py](driver_dojo/core/config.py) to get an overview.
 
 To get a real impression of what our benchmark looks like, please run:
 
 ```bash
-python -m driver_dojo.examples.manual_control [env_name=...] [subconfig.value=...]
+python -m driver_dojo.examples.manual_control [env=...] [subconfig.value=...]
 ```
 
 which lets you drive the ego vehicle using your keyboard.
@@ -79,12 +79,12 @@ import gym
 import driver_dojo
 
 config = dict(
-  simulation=dict(
-    dt=0.05
-  ) 
-  observations=dict(
-    observers=[...]
-  ) 
+      simulation=dict(
+        dt=0.05
+      ),
+      observations=dict(
+        observers=[...]
+      )
 )
 env = gym.make("DriverDojo/PlaceEnvNameHere-v0", config=config)
 ```
@@ -92,7 +92,7 @@ env = gym.make("DriverDojo/PlaceEnvNameHere-v0", config=config)
 ### Running the Benchmark Code
 We use Tianshou and Hydra for our benchmark code base. Run:
 ```bash
-python -m driver_dojo.examples.benchmark hydra.job.chdir=True algo=ppo_numeric obs=default env_name="DriverDojo/Sem-TPS-Intersection-v0"
+python -m driver_dojo.examples.benchmark hydra.job.chdir=True algo=ppo_numeric obs=default env="DriverDojo/Sem-TPS-Intersection-v0"
 ```
 to train PPO on the intersection environment. This will create a subfolder inside ```output``` in which Tensorboard logs and model checkpoints will be placed.
 Similarly, as shown above, this allows us to overwrite every configurable parameter from the outside, e.g. ```++env_train.simulation.dt=0.05``` will change the simulation time resolution of the training environment to 50ms.
