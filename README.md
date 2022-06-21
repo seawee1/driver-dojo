@@ -1,6 +1,7 @@
 # Driver Dojo: A Benchmark for Generalizable Reinforcement Learning for Autonomous Driving
 ![logo](./media/logo/logo.gif)
 
+
 Driver Dojo is an autonomous driving environment for benchmarking reinforcement learning (RL) methods based on the popular [Simulation of Urban Mobility (SUMO)](https://www.eclipse.org/sumo/) platform. 
 It focuses on generalizability, meaning that we aim to provide means to develop, prototype, research and compare RL methods that are able to handle broad distributions of driving scenarios.
 For this, we provide randomization on the street network level, the task level (ego routing), and traffic level, where the latter encompasses traffic density, traffic initialization and routing, as well as driving personalities through sampling of unique physical, car-following, lane-change and junction model parameters on a per-vehicle basis.
@@ -13,7 +14,7 @@ The key features of Driver Dojo are:
 - **Script library:** Python scripts for e.g. manually driving an environment using keyboard inputs, map plotting and RL model benchmarking through [Tianshou](https://github.com/thu-ml/tianshou) and [Hydra](https://github.com/facebookresearch/hydra.git).
 - **High Configurability:**: Fully typed configuration capabilities from the outside, allowing for diverse driving scenario creation without having to touch any source-code.
 - **Full SUMO support:** Any configuration or static scenario definition natively supported in SUMO is straightforward to integrate as an RL environment.
-- **Clean and performant:** Our codebase is modular, clean and fully documented. We are able to train an PPO agent for 10 million time steps in less than 24 hours on our desktop workstation.
+- **Clean and performant:** Our codebase is modular, clean and fully documented. We are able to train an PPO agent for 10 million time steps in less than 24 hours on our desktop workstation. Have a look at our [documentation](https://driver-dojo.readthedocs.io/en/latest/?)!
 
 ## Setup
 Installing Driver Dojo and its requirements is very easy and does not require any source compilation whatsoever. 
@@ -33,7 +34,7 @@ pip install -e .
 ```
 or
 ```bash
-pip install -e .[extra]
+pip install -e .[benchmark]
 ```
 if you plan to use our benchmark scripts.
 
