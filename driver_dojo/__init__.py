@@ -8,11 +8,6 @@ from driver_dojo.core.config import *
 from driver_dojo.core.env import DriverDojoEnv
 from driver_dojo.core.types import *
 
-##############################
-### Example script imports ###
-##############################
-
-
 ###############################
 ### Environment Definitions ###
 ###############################
@@ -231,6 +226,48 @@ for action_name, base_config, veh_model in [
 
     register(
         id=f"DriverDojo/{action_name}-{veh_model}-HighwayExit-v0",
+        entry_point=f"driver_dojo.core.env:DriverDojoEnv",
+        kwargs=dict(_config=config),
+    )
+
+
+
+    ########################
+    ### Custom Scenarios ###
+    ########################
+    this_path = os.path.dirname(os.path.realpath(__file__))
+
+    simulation_config = dict(
+        net_path=pjoin(this_path, "data/scenarios/Nuremberg-NOP/map.net.xml"),
+        route_path=pjoin(this_path, "data/scenarios/Nuremberg-NOP/fraunhofer-cruise.rou.xml"),
+        add_path=pjoin(this_path, "data/scenarios/Nuremberg-NOP/map.poly.xml"),
+        max_time_steps=300,
+        init_time=20.0,
+    )
+    config = deepcopy(base_config)
+    config["simulation"] = simulation_config
+    config["vehicle"]["v_max"] = float(SpeedClass.Urban.value)
+    config = OmegaConf.create(config)
+
+    register(
+        id=f"DriverDojo/{action_name}-{veh_model}-FraunhoferNOP-v0",
+        entry_point=f"driver_dojo.core.env:DriverDojoEnv",
+        kwargs=dict(_config=config),
+    )
+
+    simulation_config = dict(
+        net_path=pjoin(this_path, "data/scenarios/Urban/map.net.xml"),
+        route_path=pjoin(this_path, "data/scenarios/Urban/intersection.rou.xml"),
+        max_time_steps=300,
+        init_time=20.0,
+    )
+    config = deepcopy(base_config)
+    config["simulation"] = simulation_config
+    config["vehicle"]["v_max"] = float(SpeedClass.Urban.value)
+    config = OmegaConf.create(config)
+
+    register(
+        id=f"DriverDojo/{action_name}-{veh_model}-Urban_Intersection-v0",
         entry_point=f"driver_dojo.core.env:DriverDojoEnv",
         kwargs=dict(_config=config),
     )

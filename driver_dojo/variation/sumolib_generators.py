@@ -192,7 +192,7 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         clothoid = Clothoid.StandardParams(
             nodes[i].x, nodes[i].y, rads_incident[i] + angles[i], road_cs[i], road_cs[i], lengths[i]
         )
-        xs, ys = clothoid.SampleXY(500)
+        xs, ys = clothoid.SampleXY(50)
 
         xs = [x * squeeze[0] for x in xs]
         ys = [y * squeeze[1] for y in ys]

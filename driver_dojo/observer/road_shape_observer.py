@@ -79,10 +79,10 @@ class RoadShapeObserver(BaseObserver):
             # We either just calculate ray intersections for one polygon or iterate over a list of geometries from a MultiPolygon
             if isinstance(self.network_polygon, shapely.geometry.MultiPolygon):
                 iter_obj = [geom.exterior for geom in self.network_polygon.geoms]
-                logging.warning(
-                    f"RoadShapeObserver has MultiGeometry as base. This shouldn't happen, but is also taken care off. "
-                    f"Level-seed: {state_variables.level_seed}."
-                )
+                #logging.warning(
+                    #f"RoadShapeObserver has MultiGeometry as base. This shouldn't happen, but is also taken care off. "
+                    #f"Level-seed: {state_variables.level_seed}."
+                #)
             else:
                 iter_obj = [self.network_polygon.exterior]
 

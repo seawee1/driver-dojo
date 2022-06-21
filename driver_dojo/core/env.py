@@ -46,8 +46,8 @@ def _init_sumo_paths():
     temp_path = tempfile.mkdtemp(prefix="sumo_")
 
     if (
-        state_variables.config["variation"]["network"]
-        or state_variables.config["variation"]["network_netgenerate"]
+            state_variables.config["variation"]["network"]
+            or state_variables.config["variation"]["network_netgenerate"]
     ):
         state_variables.config["simulation"]["net_path"] = pjoin(
             temp_path, f"{state_variables.sumo_label}.net.xml"
@@ -59,6 +59,8 @@ def _init_sumo_paths():
     if state_variables.config["variation"]["traffic_vTypes"]:
         if state_variables.config["simulation"]["add_path"] is None:
             state_variables.config["simulation"]["add_path"] = ""
+        else:
+            state_variables.config["simulation"]["add_path"] += ","
         state_variables.config["simulation"]["add_path"] += pjoin(
             temp_path, f"{state_variables.sumo_label}.add.xml"
         )
@@ -90,16 +92,16 @@ def _init_seeding():
 
     # In case we use a list of seeds for the scenarios and/or traffic, create the seed lists.
     if (
-        state_variables.config["simulation"]["seed_num_maps"]
-        and not state_variables.seed_list_maps
+            state_variables.config["simulation"]["seed_num_maps"]
+            and not state_variables.seed_list_maps
     ):
         state_variables.seed_list_maps = [
             state_variables.np_random.randint(13371137)
             for _ in range(state_variables.config["simulation"]["seed_num_maps"])
         ]
     if (
-        state_variables.config["simulation"]["seed_num_traffic"]
-        and not state_variables.seed_list_traffic
+            state_variables.config["simulation"]["seed_num_traffic"]
+            and not state_variables.seed_list_traffic
     ):
         state_variables.seed_list_traffic = [
             state_variables.np_random.randint(13371137)
@@ -279,8 +281,8 @@ class DriverDojoEnv(gym.Env):
 
         # Track ego vehicle in GUI if requested
         if (
-            state_variables.config["simulation"]["render"]
-            and state_variables.config["simulation"]["render_track_ego"]
+                state_variables.config["simulation"]["render"]
+                and state_variables.config["simulation"]["render_track_ego"]
         ):
             state_variables.traci.gui.trackVehicle(
                 traci.gui.DEFAULT_VIEW, state_variables.config["simulation"]["egoID"]
@@ -330,6 +332,10 @@ class DriverDojoEnv(gym.Env):
 
         obs = self._observer.step()
         reward, done, info = self._reward_done_info
+
+        # Record images/videos
+        if state_variables.config.simulation.render_record:
+            self._record()
 
         return obs, reward, done, info
 
@@ -424,7 +430,6 @@ class DriverDojoEnv(gym.Env):
         else:
             edgeIDs_goal = edgeIDs
 
-
         for edgeID, num in edges_num_vehicles.items():
             if edgeID in exclude_edgeIDs:
                 continue
@@ -440,11 +445,10 @@ class DriverDojoEnv(gym.Env):
                 vehID = f"trafficInit_{edgeID}_{i}"
                 route_edges = [edgeID]
                 if (
-                    target_edge
+                        target_edge
                 ):  # If None, we only drive the current edge from start to finish
                     route_edges += [target_edge]
                 state_variables.traci.route.add(routeID, route_edges)
-
 
                 typeID = "DEFAULT_VEHTYPE" if not state_variables.config.variation.traffic_vTypes else f"vehDist{state_variables.np_random_maps.randint(0, state_variables.config.variation.vTypeDistribution_num)}"
                 state_variables.traci.vehicle.add(
@@ -556,7 +560,7 @@ class DriverDojoEnv(gym.Env):
                 )
                 route_edges = [start_edge]
                 if (
-                    target_edge
+                        target_edge
                 ):  # If None, we only drive the current edge from start to finish
                     route_edges += [target_edge]
 
@@ -592,8 +596,8 @@ class DriverDojoEnv(gym.Env):
                 self.standing_still_for = 0
 
         if (
-            state_variables.config["simulation"]["render"]
-            and state_variables.config["simulation"]["render_navigation"]
+                state_variables.config["simulation"]["render"]
+                and state_variables.config["simulation"]["render_navigation"]
         ):
             self._render_navigation()
             self._render_goals()
@@ -660,8 +664,8 @@ class DriverDojoEnv(gym.Env):
 
         # Adjust observation space to cwh if needed
         if (
-            state_variables.config.observations.cwh
-            and len(self._observation_space.shape) == 3
+                state_variables.config.observations.cwh
+                and len(self._observation_space.shape) == 3
         ):
             import gym.spaces
 
@@ -731,8 +735,8 @@ class DriverDojoEnv(gym.Env):
             first_waypointID = lambda_poiID(waypoints[0])
             last_waypointID = lambda_poiID(waypoints[-1])
             if (
-                first_waypointID == self._rendered_waypointIDs[0]
-                and last_waypointID == self._rendered_waypointIDs[-1]
+                    first_waypointID == self._rendered_waypointIDs[0]
+                    and last_waypointID == self._rendered_waypointIDs[-1]
             ):
                 do_render = False
             else:
@@ -797,12 +801,12 @@ class DriverDojoEnv(gym.Env):
 
         # Timeouts
         timeout = (
-            self.time_step > state_variables.config["simulation"]["max_time_steps"]
+                self.time_step > state_variables.config["simulation"]["max_time_steps"]
         )
 
         timeout_standing_still = (
-            self.standing_still_for
-            > state_variables.config["simulation"]["stand_still_timeout_after"]
+                self.standing_still_for
+                > state_variables.config["simulation"]["stand_still_timeout_after"]
         )
 
         ### Reward
@@ -819,9 +823,9 @@ class DriverDojoEnv(gym.Env):
         else:
             # Speed reward
             reward += (
-                reward_config["speed_reward"]
-                * state_variables.vehicle.speed
-                / state_variables.vehicle.v_max
+                    reward_config["speed_reward"]
+                    * state_variables.vehicle.speed
+                    / state_variables.vehicle.v_max
             )
             if state_variables.vehicle.speed == 0.0:
                 reward += reward_config["stand_still_penalty"]
@@ -848,3 +852,25 @@ class DriverDojoEnv(gym.Env):
         )
 
         return reward, done, info
+
+    def _record(self):
+        assert state_variables.config.simulation.render, "Can only record when simulation.render == True"
+
+        parent_path = state_variables.config.simulation.render_record
+        os.makedirs(parent_path, exist_ok=True)
+        cur_path = pjoin(parent_path, str(state_variables.episode_count))
+        if not os.path.isdir(cur_path):
+            # Create folder
+            os.makedirs(cur_path)
+
+            last_path = pjoin(parent_path, str(state_variables.episode_count - 1))
+            if state_variables.config.simulation.render_record_video and os.path.isdir(last_path):
+                import ffmpeg
+                (
+                    ffmpeg
+                        .input(f"{last_path}/*.png", pattern_type='glob', framerate=round(1.0/state_variables.config.simulation.dt))
+                        .output(f'{last_path}/video.mp4')
+                        .run()
+                )
+
+        state_variables.traci.gui.screenshot(traci.gui.DEFAULT_VIEW, f"{pjoin(cur_path, str(state_variables.time_step))}.png")

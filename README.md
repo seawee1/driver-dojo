@@ -16,6 +16,24 @@ The key features of Driver Dojo are:
 - **Full SUMO support:** Any configuration or static scenario definition natively supported in SUMO is straightforward to integrate as an RL environment.
 - **Clean and performant:** Our codebase is modular, clean and fully documented. We are able to train an PPO agent for 10 million time steps in less than 24 hours on our desktop workstation. Have a look at our [documentation](https://driver-dojo.readthedocs.io/en/latest/?)!
 
+## Showcase
+Something for the eye.
+### Core Randomized Scenarios
+Have a look into [this folder](media/showcase-videos/) for more videos.
+#### Sem-TPS-Intersection-v0 
+![Sem-TPS-Intersection-v0](media/showcase-videos/intersection-showcase.gif)
+#### Sem-TPS-Roundabout-v0 
+![Sem-TPS-Intersection-v0](media/showcase-videos/roundabout-showcase.gif)
+#### Sem-TPS-HighwayEntry-v0 
+![Sem-TPS-Intersection-v0](media/showcase-videos/highwayentry-showcase.gif)
+
+### Custom Scenarios
+#### Sem-TPS-Urban_Intersection-v0
+This scenario was built just using SUMO's netedit tool.
+![Sem-TPS-Intersection-v0](media/showcase-videos/urbanintersection-showcase.gif)
+#### Sem-TPS-FraunhoferNOP-v0
+Here, we imported an area around our Fraunhofer institute in Nuremberg from OSM using SUMO's tooling scripts and added custom traffic definitions using netedit.
+![Sem-TPS-Intersection-v0](media/showcase-videos/fraunhofernop-showcase.gif)
 ## Setup
 Installing Driver Dojo and its requirements is very easy and does not require any source compilation whatsoever. 
 

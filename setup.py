@@ -21,6 +21,7 @@ setup(
         "scenariogeneration",
         "psutil",
         "omegaconf",
+        "ffmpeg-python"
     ],
     extras_require={
         "benchmark": [

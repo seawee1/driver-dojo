@@ -33,6 +33,8 @@ class SimulationConfig:
     render: bool = False  # Set to true for rendering
     render_track_ego: bool = False  # Follow ego vehicle
     render_navigation: bool = False  # Render waypoints and sub-goals
+    render_record: Optional[str] = None  # Will take screenshots and store them under 'render_record_images' with subfolders for every episode
+    render_record_video: bool = False  # Will convert images into video. Requires ffmpeg
     seed: int = 1337  # The base seed. One to rule them all
     seed_num_maps: Optional[int] = None
     seed_num_traffic: Optional[int] = None
@@ -48,7 +50,7 @@ class SimulationConfig:
     init_time: float = 0.0  # How many seconds to freeze/delay spawn of the ego vehicle and initialize traffic (delay in the case of init_ego=True)
     init_traffic: bool = False  # Initialize the network with traffic via traci.vehicle.add()
     init_traffic_spread: float = 20.0  # Mean spread between spawned traffic vehicles per lane.
-    init_traffic_goal_strategy: str = MISSING  # How to select goal edge for spawned traffic
+    init_traffic_goal_strategy: Optional[str] = False  # How to select goal edge for spawned traffic
     init_traffic_exclude_edges: Optional[List[str]] = None
     init_ego: bool = False  # If ego spawning should be handled through traci.vehicle.add(). Alert: This might cause problems ego routes defined through the rou.xml file.
     init_ego_start_edge: Optional[str] = None
@@ -109,8 +111,8 @@ class VariationConfig:
     ] = None  # 1/period insertions per second. If None -> One vehicle per simulation step.
     traffic_routing_start_edges: Optional[
         List[str]
-    ] = MISSING  # On which edges to insert
-    traffic_routing_goal_strategy: str = MISSING  # Which goal strategy to follow, i.e. how to select goal edge based from start edge
+    ] = None  # On which edges to insert
+    traffic_routing_goal_strategy: Optional[str] = None  # Which goal strategy to follow, i.e. how to select goal edge based from start edge
     traffic_routing_randomTrips: bool = False  # Generate traffic through SUMO's randomTrips.py tooling script
     randomTrips_py_path: str = os.path.abspath(
         pjoin(os.path.dirname(__file__), "..", "..", "tools", "randomTrips.py")
