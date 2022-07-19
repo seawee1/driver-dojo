@@ -129,7 +129,6 @@ if __name__ == "__main__":
             dt=0.03,
             max_time_steps=100000,
             stand_still_timeout_after=100000,
-            demand_scale=1.0,
             init_time=0.0,
             render=True,
             render_navigation=True,
