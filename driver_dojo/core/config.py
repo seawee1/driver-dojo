@@ -60,7 +60,7 @@ class SimulationConfig:
     store_for_plotting: Optional[
         str
     ] = None  # Will copy every map (.net.xml and .xodr file) to the folder specified by 'store_for_plotting'
-    time_to_teleport: Optional[float] = 10.0
+    time_to_teleport: Optional[float] = -1
 
 
 @dataclass
