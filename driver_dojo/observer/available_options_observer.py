@@ -3,7 +3,7 @@ import numpy as np
 from driver_dojo.observer import BaseObserver
 from driver_dojo.core.types import RoadOptionsExtended
 from driver_dojo.common.utils import normalize_observations, create_observation_space
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class AvailableOptionsObserver(BaseObserver):
@@ -14,15 +14,15 @@ class AvailableOptionsObserver(BaseObserver):
         self.observation_space = create_observation_space(
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
     def observe(self):
-        position = state_variables.vehicle.position
-        laneID = state_variables.vehicle.laneID
-        waypoint = state_variables.vehicle.waypoints[
+        position = runtime_vars.vehicle.position
+        laneID = runtime_vars.vehicle.laneID
+        waypoint = runtime_vars.vehicle.waypoints[
             0
-        ]  # state_variables.sumo_map.waypoint_on_lane(position, laneID)
+        ]  # runtime_vars.sumo_map.waypoint_on_lane(position, laneID)
         road_options = waypoint.road_options
 
         obs = np.zeros(self.low.shape)
@@ -33,7 +33,7 @@ class AvailableOptionsObserver(BaseObserver):
             obs,
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
         assert obs.shape == self.low.shape

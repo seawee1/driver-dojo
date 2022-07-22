@@ -2,240 +2,71 @@ import sys
 import sumolib
 
 from driver_dojo.navigation.waypoint import Waypoint
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class LaneNode:
-    def __init__(self, lane, left, right, incoming, outgoing, on_route, is_goal):
+    def __init__(self, lane):
         self.lane = lane
         self.laneID = lane.getID()
 
-        self.left = left
-        self.right = right
-        self.incoming = incoming
-        self.outgoing = outgoing
-
-        if self.left is not None:
-            self.left.right = self
-        if self.right is not None:
-            self.right.left = self
-        [node.outgoing.append(self) for node in incoming if self not in node.outgoing]
-        [node.incoming.append(self) for node in outgoing if self not in node.incoming]
-
-        self.on_route = on_route
-        self.is_goal = is_goal
+        self.left = None
+        self.right = None
+        self.incoming = []
+        self.outgoing = []
 
 
 class SUMOMap:
     def __init__(self):
-        self._lane_graph = None
+        self.lane_graph = None
 
     def init_map(self):
         self.build_lane_graph()
 
-    @property
-    def lane_graph(self):
-        return self._lane_graph
-
     def build_lane_graph(self):
-        """Builds the lane graph of the ego route.
-        For now, we only consider lanes that lie on the ego route and lanes that directly lead off-route (one step).
-        """
-        self._lane_graph = {}
+        self.lane_graph = {}
 
-        # Get first edge of the route
-        edge = state_variables.net.getEdge(state_variables.route_edges[0])
+        edges = runtime_vars.net.getEdges(withInternal=True)
+        edges_by_edgeID = {}
+        for edge in edges:
+            lanes = edge.getLanes()
+            lanes_by_index = {}
+            for lane in lanes:
+                lane_index = lane.getIndex()
+                lane_node = LaneNode(lane)
+                lanes_by_index[lane_index] = lane_node
+                self.lane_graph[lane.getID()] = lane_node
 
-        # Get lane types
-        lane_types = edge.getType().split("|")
-        # Filter lanes to driveable lanes
-        # if lane_types[0] != '' and len(lane_types) == len(edge.getLanes()):
-        #     # Carla converted data have a type field, e.g. walking|driving|driving to specify, if driveable
-        #     lanes = [x for i, x in enumerate(edge.getLanes()) if i > len(lane_types) - 1 or lane_types[i] == 'driving']
-        # else:
+            # Set left/right attributes
+            for lane_index, lane_node in lanes_by_index.items():
+                left_index = lane_index + 1
+                if left_index in lanes_by_index.keys():
+                    lanes_by_index[left_index].right = lane_node
+                    lane_node.left = lanes_by_index[left_index]
+            edges_by_edgeID[edge.getID()] = lanes_by_index
 
-        # TODO: This way of building the lane graph is an artifact from older times and can probably be implemented much more nicely
-        lanes = edge.getLanes()
-        lanes_to_sample = lanes
-        edges_done = []
-        laneIDs_done = []
-        while len(lanes_to_sample) != 0:
-            connections_to_sample = []
-            for lane in lanes_to_sample:
-                # Sadly, sumolib.net.lane.getPermissions() is not available and we have to use this to remove disallowed lanes.
-                if lane.getWidth() < 2.0:
-                    continue
+        for edgeID, lanes_by_index in edges_by_edgeID.items():
+            for lane_index, lane_node in lanes_by_index.items():
+                # Set outgoing/incoming attributes
+                outgoing_conns = lane_node.lane.getOutgoing()
+                for outgoing_conn in outgoing_conns:
+                    via_laneID = outgoing_conn.getViaLaneID()
+                    from_laneID = outgoing_conn.getFromLane().getID()
+                    to_laneID = outgoing_conn.getToLane().getID()
 
-                # Set attributes of navigation
-                right_laneID = None
-                left_laneID = None
-                on_route = True
-                edgeID = lane.getEdge().getID()
-                laneID = lane.getID()
-                if laneID in laneIDs_done:
-                    continue
-                is_goal = edgeID == state_variables.route_edges[-1]
-                for lane2 in lanes_to_sample:
-                    if lane2.getIndex() == lane.getIndex() - 1:
-                        right_laneID = lane2.getID()
-                    if lane2.getIndex() == lane.getIndex() + 1:
-                        left_laneID = lane2.getID()
+                    if via_laneID != '':
+                        self.lane_graph[from_laneID].outgoing.append(self.lane_graph[via_laneID])
+                        self.lane_graph[via_laneID].incoming.append(self.lane_graph[from_laneID])
+                        self.lane_graph[via_laneID].outgoing.append(self.lane_graph[to_laneID])
+                        self.lane_graph[to_laneID].incoming.append(self.lane_graph[via_laneID])
+                    else:
+                        self.lane_graph[from_laneID].outgoing.append(self.lane_graph[to_laneID])
+                        self.lane_graph[to_laneID].incoming.append(self.lane_graph[from_laneID])
 
-                # Get incoming/outgoing connections
-                outgoing_laneIDs = [x.getViaLaneID() for x in lane.getOutgoing()]
-                incoming_laneIDs = [x.getID() for x in lane.getIncoming(True)]
-
-                if not is_goal:
-                    # Append all outgoing connections
-                    for conn in lane.getOutgoing():
-                        connections_to_sample.append((conn, False))
-
-                # Flag edge as already sampled in order to avoid circular execution
-                edge_id = lane.getEdge().getID()
-                if edge_id not in edges_done:
-                    edges_done.append(edge_id)
-
-                left = (
-                    self._lane_graph[left_laneID]
-                    if left_laneID in self._lane_graph
-                    else None
-                )
-                right = (
-                    self._lane_graph[right_laneID]
-                    if right_laneID in self._lane_graph
-                    else None
-                )
-                incoming = [
-                    self._lane_graph[laneID]
-                    for laneID in incoming_laneIDs
-                    if laneID in self._lane_graph
-                ]
-                outgoing = [
-                    self._lane_graph[laneID]
-                    for laneID in outgoing_laneIDs
-                    if laneID in self._lane_graph
-                ]
-                self._lane_graph[laneID] = LaneNode(
-                    lane, left, right, incoming, outgoing, on_route, is_goal
-                )
-                laneIDs_done.append(laneID)
-
-            # lanes_to_sample have all been sampled, so empty the list
-            lanes_to_sample = []
-
-            # Continue with connections
-            for conn, is_internal in connections_to_sample:
-                # Get the lane object of this connection
-                lane = state_variables.net.getLane(conn.getViaLaneID())
-
-                # Check if connected lane is on route
-                on_route = False
-                to_edgeID = conn.getToLane().getEdge().getID()
-                if (
-                    to_edgeID in state_variables.route_edges
-                    and to_edgeID not in edges_done
-                ):
-                    on_route = True
-
-                # Check other variables
-                right_laneID = None
-                left_laneID = None
-                laneID = lane.getID()
-                if laneID in laneIDs_done:
-                    continue
-                is_goal = False
-
-                # It is tricky to identify changeable lanes for junction lanes.
-                # We do this be comparing from- and to-lane indices.
-                for conn2, is_internal2 in connections_to_sample:
-                    if is_internal != is_internal2:
-                        continue
-
-                    if (
-                        not is_internal
-                        and conn2.getTo().getID() == conn.getTo().getID()
-                    ):
-                        conn2_fromIndex = conn2.getFromLane().getIndex()
-                        conn_fromIndex = conn.getFromLane().getIndex()
-                        if conn_fromIndex == conn2_fromIndex - 1:
-                            left_laneID = conn2.getViaLaneID()
-                        if conn_fromIndex == conn2_fromIndex + 1:
-                            right_laneID = conn2.getViaLaneID()
-
-                # Append to lanes_to_sample list
-                if (
-                    to_edgeID in state_variables.route_edges
-                    and to_edgeID not in edges_done
-                ):
-                    lanes_to_sample.append(conn.getToLane())
-                    # Also append lanes not directly connected (long north-south lane fix)
-                    lanes2 = conn.getToLane().getEdge().getLanes()
-                    lane_types = conn.getToLane().getEdge().getType().split("|")
-                    if not len(lane_types) == 1 and lane_types[0] == "":
-                        lanes2 = [
-                            x
-                            for i, x in enumerate(lanes2)
-                            if lane_types[i] == "driving"
-                        ]
-                    for lane2 in lanes2:
-                        if lane2 not in lanes_to_sample:
-                            lanes_to_sample.append(lane2)
-
-                # Internal junctions are weird
-                internal_junction = (
-                    state_variables.net.getLane(laneID).getOutgoing()[0].getViaLaneID()
-                    != ""
-                )
-                if internal_junction:
-                    outgoing_laneIDs = [
-                        state_variables.net.getLane(laneID)
-                        .getOutgoing()[0]
-                        .getViaLaneID()
-                    ]
-                    connections_to_sample.append(
-                        (state_variables.net.getLane(laneID).getOutgoing()[0], True)
-                    )
-                else:
-                    outgoing_laneIDs = [conn.getToLane().getID()]
-                incoming_laneIDs = [x.getID() for x in lane.getIncoming()]
-
-                left = (
-                    self._lane_graph[left_laneID]
-                    if left_laneID in self._lane_graph
-                    else None
-                )
-                right = (
-                    self._lane_graph[right_laneID]
-                    if right_laneID in self._lane_graph
-                    else None
-                )
-                incoming = [
-                    self._lane_graph[laneID]
-                    for laneID in incoming_laneIDs
-                    if laneID in self._lane_graph
-                ]
-                outgoing = [
-                    self._lane_graph[laneID]
-                    for laneID in outgoing_laneIDs
-                    if laneID in self._lane_graph
-                ]
-                self._lane_graph[laneID] = LaneNode(
-                    lane, left, right, incoming, outgoing, on_route, is_goal
-                )
-                laneIDs_done.append(laneID)
-        self._lane_graph = self._lane_graph
+        for k, v in self.lane_graph.items():
+            self.lane_graph[k] = set(v)
 
     def waypoint_on_lane(self, position, laneID):
-        if laneID not in self.lane_graph.keys():
-            print("Stop!!!!")
-            # try:
-            #     self.build_lane_graph()
-            #     print(self.lane_graph.keys())
-            #     lane_node = self.lane_graph[laneID]
-            # except Exception as ex:
-            #     print("Oh oh! This shouldn't happen...")
-            #     exit()
-
         lane_node = self.lane_graph[laneID]
         lane_position, dist = lane_node.lane.getClosestLanePosAndDist(
             position, perpendicular=False
@@ -247,11 +78,11 @@ class SUMOMap:
 
     @property
     def route_edges(self):
-        return state_variables.route_edges
+        return runtime_vars.route_edges
 
     @property
     def net(self):
-        return state_variables.net
+        return runtime_vars.net
 
 
 def parse_route(route_file, route_id, standalone=True):

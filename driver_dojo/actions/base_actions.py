@@ -1,5 +1,5 @@
 from driver_dojo.core.types import RoadOptionsExtended, RoadOptions
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 from abc import ABC, abstractmethod
 
 
@@ -8,7 +8,7 @@ class BaseActions(ABC):
         self._action_space = None
         self.RoadOptions = (
             RoadOptionsExtended
-            if state_variables.config["actions"]["extended_road_options"]
+            if runtime_vars.config["actions"]["extended_road_options"]
             else RoadOptions
         )
 

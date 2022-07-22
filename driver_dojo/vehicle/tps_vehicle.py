@@ -2,7 +2,7 @@ import numpy as np
 
 from driver_dojo.common import utils
 from driver_dojo.vehicle.base_vehicle import BaseVehicle
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class TPSVehicle(BaseVehicle):
@@ -65,7 +65,7 @@ class TPSVehicle(BaseVehicle):
         self.position = self.position + (direction * self.speed * self.dt)
 
         # Broadcast to TrafficManager
-        state_variables.traffic_manager.modify_vehicle_state(
+        runtime_vars.traffic_manager.modify_vehicle_state(
             self.egoID,
             xy=self.position,
             speed=self.speed,
@@ -83,12 +83,12 @@ class TPSVehicle(BaseVehicle):
     def reset(self):
         super().reset()
 
-        self._position = state_variables.traffic_manager.ego_state_transformed(
+        self._position = runtime_vars.traffic_manager.ego_state_transformed(
             "position"
         )
-        self._angle = state_variables.traffic_manager.ego_state_transformed("angle")
-        self._speed = state_variables.traffic_manager.ego_state_transformed("speed")
-        self._acceleration = state_variables.traffic_manager.ego_state_transformed(
+        self._angle = runtime_vars.traffic_manager.ego_state_transformed("angle")
+        self._speed = runtime_vars.traffic_manager.ego_state_transformed("speed")
+        self._acceleration = runtime_vars.traffic_manager.ego_state_transformed(
             "acceleration"
         )
 

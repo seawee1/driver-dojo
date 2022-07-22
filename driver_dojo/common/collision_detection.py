@@ -2,7 +2,7 @@ import shapely.geometry
 import shapely.affinity
 import numpy as np
 
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class RotatedRect:
@@ -31,7 +31,7 @@ class RotatedRect:
 def check_collision():
     """Check for collisions between ego and non-ego vehicle."""
 
-    dists = state_variables.traffic_manager.distance_to_ego
+    dists = runtime_vars.traffic_manager.distance_to_ego
     if dists is None:
         return False
 
@@ -39,10 +39,10 @@ def check_collision():
     if mask_radius.shape[0] == 0:
         return False
 
-    traffic_state = state_variables.traffic_manager.traffic_state_transformed()
+    traffic_state = runtime_vars.traffic_manager.traffic_state_transformed()
     traffic_state = traffic_state[mask_radius]
 
-    ego_state = state_variables.traffic_manager.ego_state_transformed
+    ego_state = runtime_vars.traffic_manager.ego_state_transformed
     ego_rect = RotatedRect(
         *ego_state("position"),
         ego_state("width"),
@@ -50,7 +50,7 @@ def check_collision():
         ego_state("angle")
     )
 
-    index = state_variables.traffic_manager.index
+    index = runtime_vars.traffic_manager.index
     for t in traffic_state:
         traffic_rect = RotatedRect(
             t[index["position"][0]],

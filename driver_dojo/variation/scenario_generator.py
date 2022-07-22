@@ -7,7 +7,7 @@ from threading import Thread
 import psutil
 import os
 
-from driver_dojo.common import state_variables
+from driver_dojo.common import runtime_vars
 import driver_dojo.core.types as types
 from driver_dojo.variation import (
     JunctionSample,
@@ -43,52 +43,52 @@ class ScenarioGenerator:
         self.generator_thread.join()
 
         # Read in all the important things
-        state_variables.net = sumolib.net.readNet(
-            state_variables.config["simulation"]["net_path"], withInternal=True
+        runtime_vars.net = sumolib.net.readNet(
+            runtime_vars.config["simulation"]["net_path"], withInternal=True
         )
-        if not state_variables.config.simulation.init_ego:
-            state_variables.route_edges = parse_route(
-                state_variables.config["simulation"]["route_path"],
-                state_variables.config["simulation"]["routeID"],
+        if not runtime_vars.config.simulation.init_ego:
+            runtime_vars.route_edges = parse_route(
+                runtime_vars.config["simulation"]["route_path"],
+                runtime_vars.config["simulation"]["routeID"],
                 standalone=True,
             )
-        state_variables.net_bbox = state_variables.net.getBBoxXY()
+        runtime_vars.net_bbox = runtime_vars.net.getBBoxXY()
 
-        store_path = state_variables.config.simulation.store_for_plotting
+        store_path = runtime_vars.config.simulation.store_for_plotting
         if store_path:
             os.makedirs(store_path, exist_ok=True)
             shutil.copyfile(
-                state_variables.config.simulation.net_path,
-                os.path.join(store_path, f"{state_variables.episode_count}.net.xml"),
+                runtime_vars.config.simulation.net_path,
+                os.path.join(store_path, f"{runtime_vars.episode_count}.net.xml"),
             )
             xodr_path = pjoin(
-                state_variables.temp_path, f"{state_variables.sumo_label}.xodr"
+                runtime_vars.temp_path, f"{runtime_vars.sumo_label}.xodr"
             )
-            if os.path.exists(pjoin(state_variables.temp_path, xodr_path)):
+            if os.path.exists(pjoin(runtime_vars.temp_path, xodr_path)):
                 shutil.copyfile(
                     xodr_path,
-                    os.path.join(store_path, f"{state_variables.episode_count}.xodr"),
+                    os.path.join(store_path, f"{runtime_vars.episode_count}.xodr"),
                 )
 
     def _generate(self):
-        if state_variables.config["variation"]["network"]:
+        if runtime_vars.config["variation"]["network"]:
             self._generate_network()
-        if state_variables.config["variation"]["network_netgenerate"]:
+        if runtime_vars.config["variation"]["network_netgenerate"]:
             self._generate_network_netgenerate()
             self._generate_traffic_routing_randomTrips()
-        if state_variables.config["variation"]["traffic_routing_randomTrips"]:
+        if runtime_vars.config["variation"]["traffic_routing_randomTrips"]:
             self._generate_traffic_routing_randomTrips()
-        if state_variables.config["variation"]["traffic_vTypes"]:
+        if runtime_vars.config["variation"]["traffic_vTypes"]:
             self._generate_vType_distribution()
 
     def _generate_network_netgenerate(self):
         netgenerate_cmd = [
             "-c",
-            state_variables.config["variation"]["netgenerate_xml_path"],
+            runtime_vars.config["variation"]["netgenerate_xml_path"],
             "-o",
-            state_variables.config["simulation"]["net_path"],
+            runtime_vars.config["simulation"]["net_path"],
             "--seed",
-            str(state_variables.maps_seed),
+            str(runtime_vars.maps_seed),
         ]
 
         netgenerate_cmd = (
@@ -102,9 +102,9 @@ class ScenarioGenerator:
         netconvert_cmd = [
             "netconvert",
             "--opendrive",
-            pjoin(state_variables.temp_path, f"{state_variables.sumo_label}.xodr"),
+            pjoin(runtime_vars.temp_path, f"{runtime_vars.sumo_label}.xodr"),
             "--output-file",
-            pjoin(state_variables.temp_path, f"{state_variables.sumo_label}.net.xml"),
+            pjoin(runtime_vars.temp_path, f"{runtime_vars.sumo_label}.net.xml"),
             "--junctions.internal-link-detail",
             "10",
             "--junctions.corner-detail",
@@ -143,7 +143,7 @@ class ScenarioGenerator:
         junction_id = 0
         roads = []
         junctions = []
-        for road_segment in state_variables.config["variation"]["network"]:
+        for road_segment in runtime_vars.config["variation"]["network"]:
             # TODO: Composing
             r = None
             j = None
@@ -265,7 +265,7 @@ class ScenarioGenerator:
             odr.add_junction(junction)
         odr.adjust_roads_and_lanes()
         odr.write_xml(
-            pjoin(state_variables.temp_path, f"{state_variables.sumo_label}.xodr")
+            pjoin(runtime_vars.temp_path, f"{runtime_vars.sumo_label}.xodr")
         )
 
         # Sometimes netconvert can get stuck in an infinite loop.
@@ -285,29 +285,29 @@ class ScenarioGenerator:
 
     def _generate_traffic_routing_randomTrips(self):
         trips_path = pjoin(
-            state_variables.temp_path, f"{state_variables.sumo_label}.trips.xml"
+            runtime_vars.temp_path, f"{runtime_vars.sumo_label}.trips.xml"
         )
 
         randomTrips_cmd = [
             "python",
-            state_variables.config["variation"]["randomTrips_py_path"],
+            runtime_vars.config["variation"]["randomTrips_py_path"],
             "-n",
-            state_variables.config["simulation"]["net_path"],
+            runtime_vars.config["simulation"]["net_path"],
             "-r",
-            state_variables.config["simulation"]["route_path"],
+            runtime_vars.config["simulation"]["route_path"],
             "-o",
             trips_path,
             "--seed",
-            str(state_variables.traffic_seed),
+            str(runtime_vars.traffic_seed),
             "--random-depart",
             "--random",
             "--period",
-            str(state_variables.config.variation.randomTrips_period),
+            str(runtime_vars.config.variation.randomTrips_period),
             "--validate",
         ]
         randomTrips_cmd += (
-            state_variables.config["variation"]["randomTrips_args"].split(" ")
-            if state_variables.config["variation"]["randomTrips_args"]
+            runtime_vars.config["variation"]["randomTrips_args"].split(" ")
+            if runtime_vars.config["variation"]["randomTrips_args"]
             else []
         )
 
@@ -321,26 +321,26 @@ class ScenarioGenerator:
 
         vTypeDistribution_cmd = [
             "python",
-            state_variables.config["variation"]["vTypeDistribution_py_path"],
-            state_variables.config["variation"]["vTypeDistribution_config_path"],
+            runtime_vars.config["variation"]["vTypeDistribution_py_path"],
+            runtime_vars.config["variation"]["vTypeDistribution_config_path"],
             "--output",
             pjoin(
-                state_variables.temp_path, f"{state_variables.sumo_label}.add.xml"
+                runtime_vars.temp_path, f"{runtime_vars.sumo_label}.add.xml"
             ),  # We write to this file. See driver_dojo.core.env_train:_init_sumo_paths() method.
             "--name",
             "vehDist",
             "--seed",
-            str(state_variables.traffic_seed),
+            str(runtime_vars.traffic_seed),
             "--size",
-            str(state_variables.config.variation.vTypeDistribution_num),
+            str(runtime_vars.config.variation.vTypeDistribution_num),
         ]
 
         if (
-            state_variables.config["variation"]["vTypeDistribution_args"]
-            and state_variables.config["variation"]["vTypeDistribution_args"] != ""
+            runtime_vars.config["variation"]["vTypeDistribution_args"]
+            and runtime_vars.config["variation"]["vTypeDistribution_args"] != ""
         ):
             vTypeDistribution_cmd += [
-                state_variables.config["variation"]["vTypeDistribution_args"]
+                runtime_vars.config["variation"]["vTypeDistribution_args"]
             ]
 
         p = subprocess.Popen(

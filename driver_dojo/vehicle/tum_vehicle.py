@@ -13,7 +13,7 @@ from driver_dojo.vehicle.vehiclemodels.vehicle_dynamics_st import vehicle_dynami
 from driver_dojo.vehicle.vehiclemodels.vehicle_dynamics_std import vehicle_dynamics_std
 from driver_dojo.vehicle.vehiclemodels.vehicle_dynamics_mb import vehicle_dynamics_mb
 
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class TUMVehicle(BaseVehicle):
@@ -67,7 +67,7 @@ class TUMVehicle(BaseVehicle):
         self._acceleration = acceleration
 
         # Broadcasts to TrafficManager
-        state_variables.traffic_manager.modify_vehicle_state(
+        runtime_vars.traffic_manager.modify_vehicle_state(
             self.egoID,
             xy=self.position,
             speed=self.speed,
@@ -93,12 +93,12 @@ class TUMVehicle(BaseVehicle):
         # 4: yaw angle
         self._state = np.zeros(self.state_dim)
         self.steering_angle = 0.0
-        self.position = state_variables.traffic_manager.ego_state_transformed(
+        self.position = runtime_vars.traffic_manager.ego_state_transformed(
             "position"
         )
-        self.angle = state_variables.traffic_manager.ego_state_transformed("angle")
-        self.speed = state_variables.traffic_manager.ego_state_transformed("speed")
-        self._acceleration = state_variables.traffic_manager.ego_state_transformed(
+        self.angle = runtime_vars.traffic_manager.ego_state_transformed("angle")
+        self.speed = runtime_vars.traffic_manager.ego_state_transformed("speed")
+        self._acceleration = runtime_vars.traffic_manager.ego_state_transformed(
             "acceleration"
         )
         self._state = self.init_func(self._state)

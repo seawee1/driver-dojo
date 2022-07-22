@@ -4,7 +4,7 @@ from shapely.geometry import Point, LineString
 import matplotlib.pyplot as plt
 import logging
 
-from driver_dojo.common import state_variables
+from driver_dojo.common import runtime_vars
 from driver_dojo.observer import BaseObserver
 from driver_dojo.common.utils import (
     net_to_polygons,
@@ -16,13 +16,13 @@ from driver_dojo.common.utils import (
 class RoadShapeObserver(BaseObserver):
     def __init__(self):
         super().__init__()
-        self.num_rays = state_variables.config["observations"]["rs_num_rays"]
-        self.ray_dist = state_variables.config["observations"]["rs_ray_dist"]
-        self.opening_angle = state_variables.config["observations"]["rs_opening_angle"]
-        self.num_inters = state_variables.config["observations"]["rs_num_inter_per_ray"]
-        self.relative = state_variables.config["observations"]["relative_to_ego"]
+        self.num_rays = runtime_vars.config["observations"]["rs_num_rays"]
+        self.ray_dist = runtime_vars.config["observations"]["rs_ray_dist"]
+        self.opening_angle = runtime_vars.config["observations"]["rs_opening_angle"]
+        self.num_inters = runtime_vars.config["observations"]["rs_num_inter_per_ray"]
+        self.relative = runtime_vars.config["observations"]["relative_to_ego"]
         self.network_polygon = None
-        # self.debug = state_variables.config['debug']['road_shape_observer']
+        # self.debug = runtime_vars.config['debug']['road_shape_observer']
 
         if self.relative:
             x_low, y_low, x_high, y_high = (
@@ -32,7 +32,7 @@ class RoadShapeObserver(BaseObserver):
                 self.ray_dist,
             )
         else:
-            x_low, y_low, x_high, y_high = state_variables.net_bbox
+            x_low, y_low, x_high, y_high = runtime_vars.net_bbox
 
         self.low = np.array(
             [x_low, y_low] * self.num_rays * self.num_inters, dtype=np.float32
@@ -44,14 +44,14 @@ class RoadShapeObserver(BaseObserver):
         self.observation_space = create_observation_space(
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
         # if self.debug:
         #     plt.gca().set_aspect('equal', adjustable='box')
 
     def observe(self):
-        ego = state_variables.vehicle
+        ego = runtime_vars.vehicle
         ego_pos = ego.position
         ego_angle = ego.angle
         ray_angles = np.linspace(
@@ -81,7 +81,7 @@ class RoadShapeObserver(BaseObserver):
                 iter_obj = [geom.exterior for geom in self.network_polygon.geoms]
                 #logging.warning(
                     #f"RoadShapeObserver has MultiGeometry as base. This shouldn't happen, but is also taken care off. "
-                    #f"Level-seed: {state_variables.level_seed}."
+                    #f"Level-seed: {runtime_vars.level_seed}."
                 #)
             else:
                 iter_obj = [self.network_polygon.exterior]
@@ -157,16 +157,16 @@ class RoadShapeObserver(BaseObserver):
         )
         if self.relative:
             intersection_xy = intersection_xy - ego_pos
-            theta = -state_variables.vehicle.angle + np.radians(90)
+            theta = -runtime_vars.vehicle.angle + np.radians(90)
             rot_mat = np.array(
                 [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
             )
             intersection_xy = np.dot(rot_mat, intersection_xy.T).T
 
-        if state_variables.config["debug"]["plot_road_shape_observations"]:
+        if runtime_vars.config["debug"]["plot_road_shape_observations"]:
             if (
-                state_variables.time_step
-                % state_variables.config["debug"]["plot_road_shape_observations"]
+                runtime_vars.time_step
+                % runtime_vars.config["debug"]["plot_road_shape_observations"]
                 == 0
             ):
                 xs, ys = zip(*self.network_polygon.exterior.coords)
@@ -186,7 +186,7 @@ class RoadShapeObserver(BaseObserver):
             intersection_xy.flatten(),
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
         if no_inter_idx.shape[0] > 0:
             obs[no_inter_idx * 2] = 0.0
@@ -198,5 +198,5 @@ class RoadShapeObserver(BaseObserver):
 
     def reset(self):
         self.network_polygon = net_to_polygons(
-            state_variables.net, fuse_lanes=True, fuse_all=True
+            runtime_vars.net, fuse_lanes=True, fuse_all=True
         )[0]

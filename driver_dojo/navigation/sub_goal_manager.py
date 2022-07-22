@@ -2,24 +2,24 @@ import numpy as np
 import sumolib
 
 from driver_dojo.navigation.waypoint import SimpleWaypoint
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class SubGoalManager:
     def __init__(self):
-        self.navigation_config = state_variables.config["navigation"]
+        self.navigation_config = runtime_vars.config["navigation"]
         self._sub_goals = None
 
     def reset(self):
         sub_goals = []
-        for i, edgeID in enumerate(state_variables.sumo_map.route_edges):
-            edge = state_variables.sumo_map.net.getEdge(edgeID)
+        for i, edgeID in enumerate(runtime_vars.sumo_map.route_edges):
+            edge = runtime_vars.sumo_map.net.getEdge(edgeID)
             start_pos = sumolib.geomhelper.positionAtShapeOffset(edge.getShape(), 0.0)
             end_pos = sumolib.geomhelper.positionAtShapeOffset(
                 edge.getShape(), edge.getLength()
             )
 
-            if i > 0 and not state_variables.config.simulation.subgoals_only_after:
+            if i > 0 and not runtime_vars.config.simulation.subgoals_only_after:
                 sub_goals.append(SimpleWaypoint(np.array(start_pos)))
             sub_goals.append(SimpleWaypoint(np.array(end_pos)))
 
@@ -37,7 +37,7 @@ class SubGoalManager:
         skipped = -1
         for i, waypoint in enumerate(self._sub_goals):
             if (
-                np.linalg.norm(state_variables.vehicle.position - waypoint.position)
+                np.linalg.norm(runtime_vars.vehicle.position - waypoint.position)
                 > self.navigation_config["sub_goal_consume_dist"]
             ):
                 break

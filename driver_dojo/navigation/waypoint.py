@@ -2,6 +2,7 @@ import numpy as np
 import sumolib
 
 from driver_dojo.core.types import RoadOptionsExtended
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class SimpleWaypoint:
@@ -91,10 +92,11 @@ class Waypoint:
                 # take the branch that makes us follow the planned route.
                 if branched or road_option == RoadOptionsExtended.FOLLOW:
                     for waypoint in waypoint_next:
-                        if waypoint.lane_node.on_route:
+                        if waypoint.on_route:
+                            print(waypoint.lane_node.laneID, waypoint.lane_node.lane.getEdge().getID())
                             waypoints.append(waypoint)
                             branched = True
-                            continue
+                            break
                 # Else, we take a branch that takes us off-route.
                 elif (
                     road_option == RoadOptionsExtended.LEFT
@@ -102,10 +104,10 @@ class Waypoint:
                 ):
                     # TODO: Left and right RoadOption. Right now we randomly select either of those navigation.
                     for waypoint in waypoint_next:
-                        if not waypoint.lane_node.on_route:
+                        if not waypoint.on_route:
                             waypoints.append(waypoint)
                             branched = True
-                            continue
+                            break
                 distance += step_size
 
         return waypoints
@@ -122,6 +124,25 @@ class Waypoint:
         )
         waypoint = Waypoint(position, lane_node, lane_position)
         return waypoint
+
+    @property
+    def on_route(self):
+        edgeID = self.lane_node.lane.getEdge().getID()
+        if edgeID in runtime_vars.route_edges:
+            return True
+        else:
+            # We are on an internal lane
+            # TODO: Might cause problems if we have two internal lanes in succession
+            for outgoing in self.lane_node.outgoing:
+                outgoing_edgeID = outgoing.lane.getEdge().getID()
+                if outgoing in runtime_vars.route_edges:
+                    return True
+        return False
+
+    @property
+    def on_goal(self):
+        edgeID = self.lane_node.lane.getEdge().getID()
+        return edgeID == runtime_vars.route_edges[-1]
 
     @property
     def left(self):

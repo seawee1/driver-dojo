@@ -4,7 +4,7 @@ from driver_dojo.core.types import CarModel
 from driver_dojo.vehicle.vehiclemodels.parameters_vehicle1 import parameters_vehicle1
 from driver_dojo.vehicle.vehiclemodels.parameters_vehicle2 import parameters_vehicle2
 from driver_dojo.vehicle.vehiclemodels.parameters_vehicle3 import parameters_vehicle3
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class BaseVehicle(ABC):
@@ -14,7 +14,7 @@ class BaseVehicle(ABC):
         self.traffic_randomizer = None
         self.vehicle_config = config
         self.egoID = egoID
-        state_variables.traffic_manager = traffic_manager
+        runtime_vars.traffic_manager = traffic_manager
         self.dt = dt
 
         parameters_vehicle_map = {
@@ -22,9 +22,9 @@ class BaseVehicle(ABC):
             CarModel.BMW320i: parameters_vehicle2,
             CarModel.VWVanagon: parameters_vehicle3,
         }
-        self.vehicle_config = state_variables.config["vehicle"]
+        self.vehicle_config = runtime_vars.config["vehicle"]
         self.tum_params = parameters_vehicle_map[self.vehicle_config["car_model"]]()
-        self.sumo_params = state_variables.traffic_manager.ego_params
+        self.sumo_params = runtime_vars.traffic_manager.ego_params
 
         # Set vehicle accel, decel, v_min, v_max, length and width based on config specifications. We use TUM vehicle
         # params in the standard case, which can be overwritten with SUMO vType params if
@@ -88,15 +88,15 @@ class BaseVehicle(ABC):
             length=self.length,
             width=self.width,
         )
-        state_variables.traffic_manager.ego_params = self.sumo_params
+        runtime_vars.traffic_manager.ego_params = self.sumo_params
 
     def reset(self):
         # Broadcast vehicle params
-        state_variables.traffic_manager.ego_params = self.sumo_params
+        runtime_vars.traffic_manager.ego_params = self.sumo_params
 
         # Set initial speed and position
-        ego_state_other = state_variables.traffic_manager.ego_state_str("laneID")
-        state_variables.traffic_manager.modify_vehicle_state(
+        ego_state_other = runtime_vars.traffic_manager.ego_state_str("laneID")
+        runtime_vars.traffic_manager.modify_vehicle_state(
             self.egoID,
             pos=self.vehicle_config["start_offset"],
             speed=self.vehicle_config["start_velocity"],
@@ -106,15 +106,15 @@ class BaseVehicle(ABC):
 
     @property
     def edgeID(self):
-        return state_variables.traffic_manager.ego_state_str("edgeID")
+        return runtime_vars.traffic_manager.ego_state_str("edgeID")
 
     @property
     def laneID(self):
-        return state_variables.traffic_manager.ego_state_str("laneID")
+        return runtime_vars.traffic_manager.ego_state_str("laneID")
 
     @property
     def laneIndex(self):
-        return state_variables.traffic_manager.ego_state_str("lane_index")
+        return runtime_vars.traffic_manager.ego_state_str("lane_index")
 
     @property
     def waypoints(self):
@@ -131,13 +131,13 @@ class BaseVehicle(ABC):
         return self.sub_goal_manager.sub_goals
 
     def _set_position(self, position):
-        state_variables.traffic_manager.modify_vehicle_state(self.egoID, xy=position)
+        runtime_vars.traffic_manager.modify_vehicle_state(self.egoID, xy=position)
 
     def _set_speed(self, speed):
-        state_variables.traffic_manager.modify_vehicle_state(self.egoID, speed=speed)
+        runtime_vars.traffic_manager.modify_vehicle_state(self.egoID, speed=speed)
 
     def _set_angle(self, angle):
-        state_variables.traffic_manager.modify_vehicle_state(self.egoID, yaw=angle)
+        runtime_vars.traffic_manager.modify_vehicle_state(self.egoID, yaw=angle)
 
     def attach_waypoint_manager(self, waypoint_manager):
         self.waypoint_manager = waypoint_manager

@@ -1,5 +1,5 @@
 from driver_dojo.vehicle.base_vehicle import BaseVehicle
-from driver_dojo.common import state_variables
+from driver_dojo.common import runtime_vars
 
 
 class SUMOVehicle(BaseVehicle):
@@ -30,11 +30,11 @@ class SUMOVehicle(BaseVehicle):
 
     @property
     def position(self):
-        return state_variables.traffic_manager.ego_state_transformed["position"]
+        return runtime_vars.traffic_manager.ego_state_transformed["position"]
 
     @property
     def speed(self):
-        return state_variables.traffic_manager.ego_state_transformed["speed"]
+        return runtime_vars.traffic_manager.ego_state_transformed["speed"]
 
     @property
     def steering_angle(self):
@@ -42,8 +42,8 @@ class SUMOVehicle(BaseVehicle):
 
     @property
     def angle(self):
-        return state_variables.traffic_manager.ego_state_transformed["angle"]
+        return runtime_vars.traffic_manager.ego_state_transformed["angle"]
 
     @property
     def acceleration(self):
-        return state_variables.traffic_manager.ego_state_transformed["acceleration"]
+        return runtime_vars.traffic_manager.ego_state_transformed["acceleration"]

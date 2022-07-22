@@ -117,7 +117,7 @@ def net_to_polygons(
 
 if __name__ == "__main__":
     # TODO: Buggy for roundabout
-    parser = argparse.ArgumentParser("Plots an .xodr file.")
+    parser = argparse.ArgumentParser("Plots an .net.xml file.")
     parser.add_argument(
         "net_dir", type=str, help="Directory with a bunch of .net.xml files."
     )

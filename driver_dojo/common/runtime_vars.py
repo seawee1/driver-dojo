@@ -23,3 +23,4 @@ vehicle = None
 episode_count = None
 sumo_label = None
 scenario_generator = None
+route_edges = None

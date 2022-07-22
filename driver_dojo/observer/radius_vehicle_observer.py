@@ -2,7 +2,7 @@ import numpy as np
 
 from driver_dojo.observer import BaseObserver
 from driver_dojo.common.utils import normalize_observations, create_observation_space
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class RadiusVehicleObserver(BaseObserver):
@@ -13,10 +13,10 @@ class RadiusVehicleObserver(BaseObserver):
 
     def __init__(self):
         super().__init__()
-        self.num_vehicles = state_variables.config["observations"]["rvo_num_vehicles"]
-        self.radius = state_variables.config["observations"]["rvo_radius"]
-        self.relative = state_variables.config["observations"]["relative_to_ego"]
-        self.signals = state_variables.config["observations"]["rvo_signals"]
+        self.num_vehicles = runtime_vars.config["observations"]["rvo_num_vehicles"]
+        self.radius = runtime_vars.config["observations"]["rvo_radius"]
+        self.relative = runtime_vars.config["observations"]["relative_to_ego"]
+        self.signals = runtime_vars.config["observations"]["rvo_signals"]
 
         if self.relative:
             x_low, y_low, x_high, y_high = (
@@ -26,12 +26,12 @@ class RadiusVehicleObserver(BaseObserver):
                 self.radius,
             )
         else:
-            x_low, y_low, x_high, y_high = state_variables.net_bbox
+            x_low, y_low, x_high, y_high = runtime_vars.net_bbox
 
-        speed_low, speed_high = state_variables.config["observations"][
+        speed_low, speed_high = runtime_vars.config["observations"][
             "rvo_speed_range"
         ]
-        acceleration_low, acceleration_high = state_variables.config["observations"][
+        acceleration_low, acceleration_high = runtime_vars.config["observations"][
             "rvo_accel_range"
         ]
 
@@ -49,11 +49,11 @@ class RadiusVehicleObserver(BaseObserver):
         self.observation_space = create_observation_space(
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
     def observe(self):
-        dists = state_variables.traffic_manager.distance_to_ego
+        dists = runtime_vars.traffic_manager.distance_to_ego
         if dists is None:
             return np.zeros_like(self.low, dtype=np.float32)
 
@@ -63,10 +63,10 @@ class RadiusVehicleObserver(BaseObserver):
 
         if self.relative:
             traffic_state = (
-                state_variables.traffic_manager.traffic_state_transformed_relative()
+                runtime_vars.traffic_manager.traffic_state_transformed_relative()
             )
         else:
-            traffic_state = state_variables.traffic_manager.traffic_state_transformed()
+            traffic_state = runtime_vars.traffic_manager.traffic_state_transformed()
 
         # Drop traffic outside radius
         traffic_state = traffic_state[mask_radius]
@@ -84,7 +84,7 @@ class RadiusVehicleObserver(BaseObserver):
         # Create observation vector
         num = traffic_state.shape[0]
         obs_data = np.zeros((num, 9)) if self.signals else np.zeros((num, 6))
-        var_to_index = state_variables.traffic_manager.index
+        var_to_index = runtime_vars.traffic_manager.index
         obs_data[:, [0, 1, 3, 4, 5]] = traffic_state[
             :,
             [
@@ -100,7 +100,7 @@ class RadiusVehicleObserver(BaseObserver):
             # VEH_SIGNAL_BLINKER_RIGHT: bit 0
             # VEH_SIGNAL_BLINKER_LEFT: bit 1
             # VEH_SIGNAL_BRAKELIGHT: bit 3
-            signals = traffic_state[:, state_variables.traffic_manager.index["signals"]]
+            signals = traffic_state[:, runtime_vars.traffic_manager.index["signals"]]
             obs_data[:, 6] = [(int(x) & 0b0001) / 0b0001 for x in signals]
             obs_data[:, 7] = [(int(x) & 0b0010) / 0b0010 for x in signals]
             obs_data[:, 8] = [(int(x) & 0b1000) / 0b1000 for x in signals]
@@ -112,7 +112,7 @@ class RadiusVehicleObserver(BaseObserver):
             obs_data,
             self.low[: obs_data.shape[0]],
             self.high[: obs_data.shape[0]],
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
         # Fill end with zeros if necessary

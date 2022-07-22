@@ -10,7 +10,7 @@ from driver_dojo.common.utils import (
     rgb2gray,
     create_observation_space,
 )
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 from driver_dojo.common.utils import normalize_observations, create_observation_space
 import matplotlib.pyplot as plt
 
@@ -19,8 +19,8 @@ class BirdsEyeObserver(BaseObserver):
     def __init__(self):
         super().__init__()
         self.lane_polygons = None
-        self.size_meters = state_variables.config["observations"]["beo_size_meters"]
-        self.ppm = state_variables.config["observations"]["beo_ppm"]
+        self.size_meters = runtime_vars.config["observations"]["beo_size_meters"]
+        self.ppm = runtime_vars.config["observations"]["beo_ppm"]
         self.size = int(self.size_meters * self.ppm)
         self.num_channels = 3
 
@@ -31,10 +31,10 @@ class BirdsEyeObserver(BaseObserver):
         self.observation_space = create_observation_space(
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
-        self.draw_subgoals = state_variables.config.observations.beo_draw_subgoals
+        self.draw_subgoals = runtime_vars.config.observations.beo_draw_subgoals
 
         # Create figure and set to exact pixel size
         plt.rcParams["figure.dpi"] = 100
@@ -49,18 +49,18 @@ class BirdsEyeObserver(BaseObserver):
         )
 
     def _interesting_traffic(self):
-        dists = state_variables.traffic_manager.distance_to_ego
+        dists = runtime_vars.traffic_manager.distance_to_ego
         if dists is None:
             return []
 
-        traffic_data = state_variables.traffic_manager.traffic_state_transformed()
+        traffic_data = runtime_vars.traffic_manager.traffic_state_transformed()
         # mask = np.argwhere(dists <= self.size_meters / 2.0).flatten()
 
         return traffic_data  # [mask]
 
     def observe(self):
 
-        ego_data = state_variables.traffic_manager.ego_state_transformed()
+        ego_data = runtime_vars.traffic_manager.ego_state_transformed()
         traffic_data = self._interesting_traffic()
 
         self.ax = plt
@@ -113,7 +113,7 @@ class BirdsEyeObserver(BaseObserver):
 
         # Draw subgoals
         if self.draw_subgoals:
-            goals = state_variables.vehicle.sub_goals
+            goals = runtime_vars.vehicle.sub_goals
             if goals and len(goals) > 0:
                 from shapely.geometry import Point
 
@@ -131,9 +131,9 @@ class BirdsEyeObserver(BaseObserver):
 
         # Debug
         if (
-            state_variables.config.debug.plot_birds_eye_observations
-            and state_variables.time_step
-            % state_variables.config.debug.plot_birds_eye_observations
+            runtime_vars.config.debug.plot_birds_eye_observations
+            and runtime_vars.time_step
+            % runtime_vars.config.debug.plot_birds_eye_observations
             == 0
         ):
             from PIL import Image
@@ -145,10 +145,10 @@ class BirdsEyeObserver(BaseObserver):
             img,
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
         return img
 
     def reset(self):
-        self.lane_polygons = net_to_polygons(state_variables.net)
+        self.lane_polygons = net_to_polygons(runtime_vars.net)

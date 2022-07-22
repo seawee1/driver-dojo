@@ -11,7 +11,7 @@ from os.path import join as pjoin
 import xml.etree.cElementTree as ET
 from sumolib import checkBinary
 
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class SUMOEngine:
@@ -28,53 +28,53 @@ class SUMOEngine:
         #   Decrease --lateral-resolution for better performance?
         sumoCmd = [
             "-c",
-            state_variables.sumocfg_path,
+            runtime_vars.sumocfg_path,
             "-W",
             "true",
             "--no-step-log",
             "true",
             "--step-length",
-            str(state_variables.config["simulation"]["dt"]),
+            str(runtime_vars.config["simulation"]["dt"]),
             "--lateral-resolution",
             str(
-                state_variables.config["simulation"]["lateral_resolution"]
+                runtime_vars.config["simulation"]["lateral_resolution"]
             ),  # Need to be set smooth lane changes of SUMO-controlled vehicle. Otherwise, cars teleport.
             "--collision.action",
             "none",  # Collisions are dealt with by driver_dojo.common.collision_detection
             "--scale",
-            str(state_variables.config["simulation"]["demand_scale"]),
+            str(runtime_vars.config["simulation"]["demand_scale"]),
             "--xml-validation",
             "never",
             "--time-to-impatience",
-            str(state_variables.config["simulation"]["time_to_impatience"]),
+            str(runtime_vars.config["simulation"]["time_to_impatience"]),
             "--gui-settings-file",
-            str(state_variables.config["simulation"]["gui_xml_path"]),
+            str(runtime_vars.config["simulation"]["gui_xml_path"]),
             "--seed",
-            str(state_variables.traffic_seed),
+            str(runtime_vars.traffic_seed),
             "--default.carfollowmodel",
-            state_variables.config["simulation"]["car_following_model"].value,
+            runtime_vars.config["simulation"]["car_following_model"].value,
             "--lanechange.overtake-right",
             "false",
         ]
         sumoCmd += (
             ["--tls.all-off", "true"]
-            if state_variables.config["simulation"]["tls_off"]
+            if runtime_vars.config["simulation"]["tls_off"]
             else []
         )
         sumoCmd += (
-            ["--additional-files", state_variables.config["simulation"]["add_path"]]
-            if state_variables.config["simulation"]["add_path"] is not None
+            ["--additional-files", runtime_vars.config["simulation"]["add_path"]]
+            if runtime_vars.config["simulation"]["add_path"] is not None
             else []
         )
         sumoCmd += (
             [
                 "--time-to-teleport",
-                str(state_variables.config["simulation"]["time_to_teleport"]),
+                str(runtime_vars.config["simulation"]["time_to_teleport"]),
             ]
-            if state_variables.config["simulation"]["time_to_teleport"] is not None
+            if runtime_vars.config["simulation"]["time_to_teleport"] is not None
             else []
         )
-        if state_variables.config["simulation"]["render"]:
+        if runtime_vars.config["simulation"]["render"]:
             sumoCmd += ["--delay", str(1000)]
             # Use GUI
             sumoBinary = (
@@ -90,7 +90,7 @@ class SUMOEngine:
             )
 
         # TODO: Include again. However, has no effect with EIDM!
-        # driverstate_config = state_variables.config['driver_state']
+        # driverstate_config = runtime_vars.config['driver_state']
         # if driverstate_config['enabled']:
         #     for k, v in driverstate_config.items():
         #         driverstate_config[k] = str(v)
@@ -114,33 +114,33 @@ class SUMOEngine:
             logging.info(f"Calling 'sumo {args_str}'")
 
             # Start a SUMO process
-            traci.start([sumoBinary] + sumoCmd, label=state_variables.sumo_label)
-            state_variables.traci = traci.getConnection(state_variables.sumo_label)
+            traci.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
+            runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
             self.running = True
             logging.info(
-                f"Initialized SUMO instance with label {state_variables.sumo_label}..."
+                f"Initialized SUMO instance with label {runtime_vars.sumo_label}..."
             )
         else:
             # Resets simulator to initial state
-            state_variables.traci.load(sumoCmd)
+            runtime_vars.traci.load(sumoCmd)
 
         # self.generator_thread = Thread(target=self.generate, args=())
         # self.generator_thread.start()
-        return state_variables.traci
+        return runtime_vars.traci
 
     def close_engine(self):
         # Closes the simulator
         if self.running:
-            state_variables.traci.close()
-            traci.switch(state_variables.sumo_label)
+            runtime_vars.traci.close()
+            traci.switch(runtime_vars.sumo_label)
             traci.close()
-            state_variables.traci = None
+            runtime_vars.traci = None
             self.running = False
             logging.info(
-                f"Closed SUMO instance with label {state_variables.sumo_label}..."
+                f"Closed SUMO instance with label {runtime_vars.sumo_label}..."
             )
         sys.stdout.flush()
 
     def simulationStep(self):
         # Add whatever you want to do before/after simulationStep
-        state_variables.traci.simulationStep()
+        runtime_vars.traci.simulationStep()

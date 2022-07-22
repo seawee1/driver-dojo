@@ -26,10 +26,10 @@ class SimulationConfig:
     add_path: Optional[str] = None  # Path to additional, separated by ,
     gui_xml_path: str = os.path.abspath(
         pjoin(os.path.dirname(__file__), "..", "data", "gui.xml")
-    )  # GUI state_variables xml path
+    )  # GUI runtime_vars xml path
     egoID: str = "ego"  # ID of ego vehicle
     routeID: str = "route_ego"  # ID of ego route
-    demand_scale: float = 1.0  # Scale traffic amount. Alert! Don't set bigger than 1.0!
+    demand_scale: float = 1.0  # Scale traffic amount. Alert! Don't set bigger than 1.0, as this will create multiple ego spawns!
     render: bool = False  # Set to true for rendering
     render_track_ego: bool = False  # Follow ego vehicle
     render_navigation: bool = False  # Render waypoints and sub-goals

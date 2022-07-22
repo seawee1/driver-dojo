@@ -13,14 +13,14 @@ from traci.constants import (
 from traci.constants import VAR_ROAD_ID, VAR_LANE_ID, VAR_LANE_INDEX
 import logging
 
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 from driver_dojo.common import utils
 
 
 class TrafficManager:
     def __init__(self):
-        self.simulation_config = state_variables.config["simulation"]
-        self.rand_config = state_variables.config["variation"]
+        self.simulation_config = runtime_vars.config["simulation"]
+        self.rand_config = runtime_vars.config["variation"]
         self.radius = self.simulation_config["traffic_manager_radius"]
         self.varIDs = [
             VAR_POSITION,
@@ -69,7 +69,7 @@ class TrafficManager:
         self._dist_to_ego = None
 
     def reset(self):
-        # state_variables.net = sumolib.net.readNet(self.simulation_config['net_path'], withInternal=True)
+        # runtime_vars.net = sumolib.net.readNet(self.simulation_config['net_path'], withInternal=True)
         self._reset_data_structures()
 
         # Note: other subscriptions filters might be interesting!
@@ -82,82 +82,82 @@ class TrafficManager:
         # addSubscriptionFilterLeadFollow: to neighbor and ego-lane leader and follower of the ego.
         # addSubscriptionFilterNoOpposite: omits vehicle on other edges
         # addSubscriptionFilterTurn: foes on upcoming junction
-        state_variables.traci.vehicle.subscribeContext(
+        runtime_vars.traci.vehicle.subscribeContext(
             self.simulation_config["egoID"],
             CMD_GET_VEHICLE_VARIABLE,
             self.radius,
             varIDs=self.varIDs,
         )
-        if state_variables.config["simulation"]["filter_traffic"]:
+        if runtime_vars.config["simulation"]["filter_traffic"]:
             # SUMO 1.11 release notes: https://www.eclipse.org/lists/sumo-announce/msg00049.html
             # "addSubscriptionFilterTurn can now be combined (additively) with addSubscriptionFilterLateralDistance and with addSubscriptionFilterLanes."
             # -> Traffic filtering can also be implemented using multiple subscription filters, but we found results to be a little unpredictable.
-            state_variables.traci.vehicle.addSubscriptionFilterTurn(50.0, 20.0)
+            runtime_vars.traci.vehicle.addSubscriptionFilterTurn(50.0, 20.0)
 
     def step(self):
         self._reset_data_structures()
 
         if self.rand_config["traffic_vTypes"]:
-            departedIDs = state_variables.traci.simulation.getDepartedIDList()
+            departedIDs = runtime_vars.traci.simulation.getDepartedIDList()
             for departedID in departedIDs:
                 if departedID != self.simulation_config["egoID"]:
-                    state_variables.traci.vehicle.setType(departedID, "vehDist")
+                    runtime_vars.traci.vehicle.setType(departedID, "vehDist")
 
-        context = state_variables.traci.vehicle.getContextSubscriptionResults(
+        context = runtime_vars.traci.vehicle.getContextSubscriptionResults(
             self.simulation_config["egoID"]
         )
 
-        if state_variables.config["simulation"]["filter_traffic"]:
+        if runtime_vars.config["simulation"]["filter_traffic"]:
             # TODO: We might loose some performance because of all the TraCI calls. Maybe there's a better way to do this.
             def manually_add_subscription_result(vehID):
                 if vehID == "":
                     return
                 context[vehID] = {
                     VAR_POSITION: list(
-                        state_variables.traci.vehicle.getPosition(vehID)
+                        runtime_vars.traci.vehicle.getPosition(vehID)
                     ),
-                    VAR_ANGLE: state_variables.traci.vehicle.getAngle(vehID),
-                    VAR_SPEED: state_variables.traci.vehicle.getSpeed(vehID),
-                    VAR_LENGTH: state_variables.traci.vehicle.getLength(vehID),
-                    VAR_WIDTH: state_variables.traci.vehicle.getWidth(vehID),
-                    VAR_ROAD_ID: state_variables.traci.vehicle.getRoadID(vehID),
-                    VAR_LANE_ID: state_variables.traci.vehicle.getLaneID(vehID),
-                    VAR_LANE_INDEX: state_variables.traci.vehicle.getLaneIndex(vehID),
-                    VAR_ACCELERATION: state_variables.traci.vehicle.getAcceleration(
+                    VAR_ANGLE: runtime_vars.traci.vehicle.getAngle(vehID),
+                    VAR_SPEED: runtime_vars.traci.vehicle.getSpeed(vehID),
+                    VAR_LENGTH: runtime_vars.traci.vehicle.getLength(vehID),
+                    VAR_WIDTH: runtime_vars.traci.vehicle.getWidth(vehID),
+                    VAR_ROAD_ID: runtime_vars.traci.vehicle.getRoadID(vehID),
+                    VAR_LANE_ID: runtime_vars.traci.vehicle.getLaneID(vehID),
+                    VAR_LANE_INDEX: runtime_vars.traci.vehicle.getLaneIndex(vehID),
+                    VAR_ACCELERATION: runtime_vars.traci.vehicle.getAcceleration(
                         vehID
                     ),
-                    VAR_SIGNALS: state_variables.traci.vehicle.getSignals(vehID),
+                    VAR_SIGNALS: runtime_vars.traci.vehicle.getSignals(vehID),
                 }
 
             # We have to manually add the ego via TraCI requests
-            egoID = state_variables.config["simulation"]["egoID"]
+            egoID = runtime_vars.config["simulation"]["egoID"]
             manually_add_subscription_result(egoID)
 
             # We then add followers and leaders to traffic of interest
             # print(follower, leader, left_followers, right_followers, left_leaders, right_leaders)
             # -> result: ('', -1.0) None () () () ()
             vehIDs = []
-            follower = state_variables.traci.vehicle.getFollower(egoID)
+            follower = runtime_vars.traci.vehicle.getFollower(egoID)
             if follower[0] != "":
                 vehIDs.append(follower[0])
-            leader = state_variables.traci.vehicle.getLeader(egoID)
+            leader = runtime_vars.traci.vehicle.getLeader(egoID)
             if leader is not None:
                 vehIDs.append(leader[0])
             [
                 vehIDs.append(x[0])
-                for x in state_variables.traci.vehicle.getLeftFollowers(egoID)
+                for x in runtime_vars.traci.vehicle.getLeftFollowers(egoID)
             ]
             [
                 vehIDs.append(x[0])
-                for x in state_variables.traci.vehicle.getRightFollowers(egoID)
+                for x in runtime_vars.traci.vehicle.getRightFollowers(egoID)
             ]
             [
                 vehIDs.append(x[0])
-                for x in state_variables.traci.vehicle.getLeftLeaders(egoID)
+                for x in runtime_vars.traci.vehicle.getLeftLeaders(egoID)
             ]
             [
                 vehIDs.append(x[0])
-                for x in state_variables.traci.vehicle.getRightLeaders(egoID)
+                for x in runtime_vars.traci.vehicle.getRightLeaders(egoID)
             ]
             for vehID in vehIDs:
                 manually_add_subscription_result(vehID)
@@ -197,11 +197,11 @@ class TrafficManager:
                 self._trafficIDs.append(k)
                 i += 1
 
-            if state_variables.config["simulation"]["junction_ignore_ego"]:
-                state_variables.traci.vehicle.setParameter(
+            if runtime_vars.config["simulation"]["junction_ignore_ego"]:
+                runtime_vars.traci.vehicle.setParameter(
                     k,
                     "junctionModel.ignoreIDs",
-                    state_variables.config["simulation"]["egoID"],
+                    runtime_vars.config["simulation"]["egoID"],
                 )
 
     def modify_vehicle_state(
@@ -231,7 +231,7 @@ class TrafficManager:
         # Set position along lane
         if pos is not None and laneID is not None:
             x, y = sumolib.geomhelper.positionAtShapeOffset(
-                state_variables.net.getLane(laneID).getShape(), pos
+                runtime_vars.net.getLane(laneID).getShape(), pos
             )
             xy = np.array([x, y])
 
@@ -268,18 +268,18 @@ class TrafficManager:
             # bit2 (keepRoute = 4 when only this bit is set)
             #     1:  lane permissions are ignored when mapping
             #     0:  The vehicle is mapped only to lanes that allow it's vehicle class
-            state_variables.traci.vehicle.moveToXY(
+            runtime_vars.traci.vehicle.moveToXY(
                 id, edgeID, lane_index, x, y, angle=yaw, keepRoute=1
             )
 
         # Speed
         if speed is not None:
-            state_variables.traci.vehicle.setSpeed(id, speed=speed)
+            runtime_vars.traci.vehicle.setSpeed(id, speed=speed)
             state[self.index["speed"]] = speed
 
         # Override signaling
         if override_signals:
-            state_variables.traci.vehicle.setSignals(id, 0)
+            runtime_vars.traci.vehicle.setSignals(id, 0)
             state[self.index["signals"]] = 0
 
         # Write-back new state
@@ -444,39 +444,39 @@ class TrafficManager:
     @property
     def ego_params(self):
         return dict(
-            accel=state_variables.traci.vehicle.getAccel(
+            accel=runtime_vars.traci.vehicle.getAccel(
                 self.simulation_config["egoID"]
             ),
-            decel=state_variables.traci.vehicle.getDecel(
+            decel=runtime_vars.traci.vehicle.getDecel(
                 self.simulation_config["egoID"]
             ),
             v_min=0.0,
-            v_max=state_variables.traci.vehicle.getMaxSpeed(
+            v_max=runtime_vars.traci.vehicle.getMaxSpeed(
                 self.simulation_config["egoID"]
             ),
-            length=state_variables.traci.vehicle.getLength(
+            length=runtime_vars.traci.vehicle.getLength(
                 self.simulation_config["egoID"]
             ),
-            width=state_variables.traci.vehicle.getWidth(
+            width=runtime_vars.traci.vehicle.getWidth(
                 self.simulation_config["egoID"]
             ),
         )
 
     @ego_params.setter
     def ego_params(self, params):
-        state_variables.traci.vehicle.setAccel(
+        runtime_vars.traci.vehicle.setAccel(
             self.simulation_config["egoID"], params["accel"]
         )
-        state_variables.traci.vehicle.setDecel(
+        runtime_vars.traci.vehicle.setDecel(
             self.simulation_config["egoID"], -params["decel"]
         )
-        state_variables.traci.vehicle.setMaxSpeed(
+        runtime_vars.traci.vehicle.setMaxSpeed(
             self.simulation_config["egoID"], params["v_max"]
         )
-        state_variables.traci.vehicle.setLength(
+        runtime_vars.traci.vehicle.setLength(
             self.simulation_config["egoID"], params["length"]
         )
-        state_variables.traci.vehicle.setWidth(
+        runtime_vars.traci.vehicle.setWidth(
             self.simulation_config["egoID"], params["width"]
         )
 

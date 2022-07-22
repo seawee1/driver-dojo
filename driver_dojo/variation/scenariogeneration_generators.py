@@ -13,7 +13,7 @@ from scenariogeneration.xodr.opendrive import Road
 from scenariogeneration.xodr.links import Junction, Connection
 import logging
 
-from driver_dojo.common import state_variables
+from driver_dojo.common import runtime_vars
 
 STD_ROADMARK_SOLID = RoadMark(RoadMarkType.solid, 0.2)
 
@@ -621,37 +621,37 @@ def create_highway_exit(
 class JunctionSample:
     def __init__(self):
         self.odr = xodr.OpenDrive("scenario")
-        self.n_roads = state_variables.np_random_maps.choice(
+        self.n_roads = runtime_vars.np_random_maps.choice(
             [3, 4, 5], p=[0.3, 0.5, 0.2]
         )
         self.junction_name = "junction 1"
         self.junction_id = 1
         self.internal_id = 100
         self.radius = [
-            state_variables.np_random_maps.randint(15, 31) for _ in range(self.n_roads)
+            runtime_vars.np_random_maps.randint(15, 31) for _ in range(self.n_roads)
         ]
         self.lengths = [
-            state_variables.np_random_maps.randint(40, 80) for _ in range(self.n_roads)
+            runtime_vars.np_random_maps.randint(40, 80) for _ in range(self.n_roads)
         ]
         self.cs_outer = [
-            state_variables.np_random_maps.uniform(low=-0.02, high=0.02)
+            runtime_vars.np_random_maps.uniform(low=-0.02, high=0.02)
             for _ in range(self.n_roads)
         ]
         self.cs_inner = [
-            state_variables.np_random_maps.uniform(low=-0.02, high=0.02)
+            runtime_vars.np_random_maps.uniform(low=-0.02, high=0.02)
             for _ in range(self.n_roads)
         ]
         self.n_lanes = [
             [
-                state_variables.np_random_maps.choice([1, 2, 3], p=[0.45, 0.45, 0.1]),
-                state_variables.np_random_maps.choice([1, 2, 3], p=[0.45, 0.45, 0.1]),
+                runtime_vars.np_random_maps.choice([1, 2, 3], p=[0.45, 0.45, 0.1]),
+                runtime_vars.np_random_maps.choice([1, 2, 3], p=[0.45, 0.45, 0.1]),
             ]
             for _ in range(self.n_roads)
         ]
         self.angles = [
             np.radians(
                 i * 365 / self.n_roads
-                + state_variables.np_random_maps.randint(
+                + runtime_vars.np_random_maps.randint(
                     -250.0 / self.n_roads / 2.0, 250.0 / self.n_roads / 2.0
                 )
             )
@@ -662,12 +662,12 @@ class JunctionSample:
 class HighwayEntrySample:
     def __init__(self):
         curvature_range = [-0.03, 0.03]
-        self.c1 = state_variables.np_random_maps.uniform(low=-0.01, high=0.01)
-        self.c2 = state_variables.np_random_maps.uniform(low=-0.005, high=0.005)
-        self.c3 = state_variables.np_random_maps.uniform(
+        self.c1 = runtime_vars.np_random_maps.uniform(low=-0.01, high=0.01)
+        self.c2 = runtime_vars.np_random_maps.uniform(low=-0.005, high=0.005)
+        self.c3 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
-        self.c_merge = state_variables.np_random_maps.uniform(
+        self.c_merge = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=self.c1 - 0.01
         )
 
@@ -675,16 +675,16 @@ class HighwayEntrySample:
 class HighwayDriveSample:
     def __init__(self):
         curvature_range = [-0.015, 0.015]
-        self.c1 = state_variables.np_random_maps.uniform(
+        self.c1 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
-        self.c2 = state_variables.np_random_maps.uniform(
+        self.c2 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
-        self.c3 = state_variables.np_random_maps.uniform(
+        self.c3 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
-        self.c4 = state_variables.np_random_maps.uniform(
+        self.c4 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
 
@@ -692,12 +692,12 @@ class HighwayDriveSample:
 class HighwayExitSample:
     def __init__(self):
         curvature_range = [-0.03, 0.03]
-        self.c1 = state_variables.np_random_maps.uniform(
+        self.c1 = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=curvature_range[1]
         )
-        self.c2 = state_variables.np_random_maps.uniform(low=-0.005, high=0.005)
-        self.c3 = state_variables.np_random_maps.uniform(low=-0.01, high=0.01)
-        self.c_exit = state_variables.np_random_maps.uniform(
+        self.c2 = runtime_vars.np_random_maps.uniform(low=-0.005, high=0.005)
+        self.c3 = runtime_vars.np_random_maps.uniform(low=-0.01, high=0.01)
+        self.c_exit = runtime_vars.np_random_maps.uniform(
             low=curvature_range[0], high=self.c3 - 0.01
         )
 
@@ -705,8 +705,8 @@ class HighwayExitSample:
 class HighwaySample:
     def __init__(self):
         self.n_lanes = [
-            state_variables.np_random_maps.choice([1, 2, 3, 4], p=[0.1, 0.4, 0.4, 0.1]),
-            state_variables.np_random_maps.choice([1, 2, 3, 4], p=[0.1, 0.4, 0.4, 0.1]),
+            runtime_vars.np_random_maps.choice([1, 2, 3, 4], p=[0.1, 0.4, 0.4, 0.1]),
+            runtime_vars.np_random_maps.choice([1, 2, 3, 4], p=[0.1, 0.4, 0.4, 0.1]),
         ]
         self.entry = HighwayEntrySample()
         self.drive = HighwayDriveSample()

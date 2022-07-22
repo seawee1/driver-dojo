@@ -3,7 +3,7 @@ import numpy as np
 from driver_dojo.common import utils
 from driver_dojo.observer import BaseObserver
 from driver_dojo.common.utils import normalize_observations, create_observation_space
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class WaypointObserver(BaseObserver):
@@ -17,23 +17,23 @@ class WaypointObserver(BaseObserver):
 
     def __init__(self):
         super().__init__()
-        self.num_waypoints = state_variables.config["observations"]["wp_num"]
+        self.num_waypoints = runtime_vars.config["observations"]["wp_num"]
 
-        if state_variables.config["observations"]["wp_xy_range"] is not None:
-            x_low, y_low, x_high, y_high = state_variables.config["observations"][
+        if runtime_vars.config["observations"]["wp_xy_range"] is not None:
+            x_low, y_low, x_high, y_high = runtime_vars.config["observations"][
                 "wp_xy_range"
             ]
         else:
             x_low, y_low, x_high, y_high = (
-                state_variables.net_bbox[0][0],
-                state_variables.net_bbox[0][1],
-                state_variables.net_bbox[1][0],
-                state_variables.net_bbox[1][1],
+                runtime_vars.net_bbox[0][0],
+                runtime_vars.net_bbox[0][1],
+                runtime_vars.net_bbox[1][0],
+                runtime_vars.net_bbox[1][1],
             )
 
         # Distance range
         dist_low = 0.0
-        dist_high = state_variables.config["observations"]["wp_dist_max"]
+        dist_high = runtime_vars.config["observations"]["wp_dist_max"]
 
         self.low = np.array(
             [x_low, y_low, dist_low, -np.pi] * self.num_waypoints, dtype=np.float32
@@ -45,18 +45,18 @@ class WaypointObserver(BaseObserver):
         self.observation_space = create_observation_space(
             self.low,
             self.high,
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
     def observe(self, waypoints=None):
         waypoints = (
-            state_variables.vehicle.waypoints if waypoints is None else waypoints
+            runtime_vars.vehicle.waypoints if waypoints is None else waypoints
         )
         if len(waypoints) == 0:
             return np.zeros_like(self.low)
 
-        xy_ego = state_variables.vehicle.position
-        angle = utils.wrap_to_pi(state_variables.vehicle.angle)
+        xy_ego = runtime_vars.vehicle.position
+        angle = utils.wrap_to_pi(runtime_vars.vehicle.angle)
 
         xy = np.array([waypoint.position for waypoint in waypoints])
         xy_rel = xy - xy_ego
@@ -70,7 +70,7 @@ class WaypointObserver(BaseObserver):
         match_angles = utils.wrap_to_pi(angles - angle)
 
         # Make xy-coordinates relative to ego position and rotation
-        if state_variables.config["observations"]["relative_to_ego"]:
+        if runtime_vars.config["observations"]["relative_to_ego"]:
             theta = -angle + np.radians(90)
             rot = np.array(
                 [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
@@ -95,7 +95,7 @@ class WaypointObserver(BaseObserver):
             obs,
             self.low[: obs.shape[0]],
             self.high[: obs.shape[0]],
-            state_variables.config["observations"]["feature_scaling"],
+            runtime_vars.config["observations"]["feature_scaling"],
         )
 
         # Appends 0 entries if not enough waypoints

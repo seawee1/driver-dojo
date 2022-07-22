@@ -2,7 +2,7 @@ import gym
 import numpy as np
 
 from driver_dojo.common.utils import create_observation_space
-import driver_dojo.common.state_variables as state_variables
+import driver_dojo.common.runtime_vars as runtime_vars
 
 
 class MultiObserver:
@@ -19,7 +19,7 @@ class MultiObserver:
         ----------
         """
 
-        self.num_frame_stack = state_variables.config["observations"]["num_frame_stack"]
+        self.num_frame_stack = runtime_vars.config["observations"]["num_frame_stack"]
 
         self.observation_members = {"vector": [], "image": []}
         self.observation_spaces = {"vector": None, "image": None}
@@ -44,7 +44,7 @@ class MultiObserver:
                 * self.num_frame_stack
             )
             self.observation_spaces["vector"] = create_observation_space(
-                low, high, state_variables.config["observations"]["feature_scaling"]
+                low, high, runtime_vars.config["observations"]["feature_scaling"]
             )
         if len(self.observation_members["image"]) > 0:
             low = np.concatenate(
@@ -59,7 +59,7 @@ class MultiObserver:
             )
 
             self.observation_spaces["image"] = create_observation_space(
-                low, high, state_variables.config["observations"]["feature_scaling"]
+                low, high, runtime_vars.config["observations"]["feature_scaling"]
             )
 
         if self.observation_spaces["image"] is None:
@@ -120,7 +120,7 @@ class MultiObserver:
         # TODO
         img = self.frames
         if (
-            state_variables.config["observations"]["cwh"]
+            runtime_vars.config["observations"]["cwh"]
             and not self.observation_spaces["vector"]
         ):
             img = np.rollaxis(self.frames, 2)
