@@ -12,7 +12,7 @@ The key features of Driver Dojo are:
 - **Multiple action spaces:** A continuous, discretized as well as semantic action space founded on automatic lane-following through a low-level controller.
 - **Different vehicle models:** Physical dynamics and simplified lane-following car models.
 - **Script library:** Python scripts for e.g. manually driving an environment using keyboard inputs, map plotting and RL model benchmarking through [Tianshou](https://github.com/thu-ml/tianshou) and [Hydra](https://github.com/facebookresearch/hydra.git).
-- **High Configurability:**: Fully typed configuration capabilities from the outside, allowing for diverse driving scenario creation without having to touch any source-code.
+- **High Configurability:** Fully typed configuration capabilities from the outside, allowing for diverse driving scenario creation without having to touch any source-code.
 - **Full SUMO support:** Any configuration or static scenario definition natively supported in SUMO is straightforward to integrate as an RL environment.
 - **Clean and performant:** Our codebase is modular, clean and fully documented. We are able to train an PPO agent for 10 million time steps in less than 24 hours on our desktop workstation. Have a look at our [documentation](https://driver-dojo.readthedocs.io/en/latest/?)!
 
