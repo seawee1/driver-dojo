@@ -121,7 +121,7 @@ For the results of our paper, we used ```env_train=train_x_0``` and ```env_train
 ## Third-party Components
 Besides [SUMO](https://www.eclipse.org/sumo/) and [Carla](https://carla.org/), we thank the authors of [Hydra](https://github.com/facebookresearch/hydra), [Tianshou](https://github.com/thu-ml/tianshou), [scenariogeneration](https://github.com/pyoscx/scenariogeneration) and [commonroad-vehicle-models](https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models), without which this project in its current form would not have been possible.
 
-##
+## References
 If you use Driver Dojo in your own work, please cite:
 ```bash
 @misc{https://doi.org/10.48550/arxiv.2207.11432,
