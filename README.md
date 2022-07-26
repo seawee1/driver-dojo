@@ -121,6 +121,18 @@ For the results of our paper, we used ```env_train=train_x_0``` and ```env_train
 ## Third-party Components
 Besides [SUMO](https://www.eclipse.org/sumo/) and [Carla](https://carla.org/), we thank the authors of [Hydra](https://github.com/facebookresearch/hydra), [Tianshou](https://github.com/thu-ml/tianshou), [scenariogeneration](https://github.com/pyoscx/scenariogeneration) and [commonroad-vehicle-models](https://gitlab.lrz.de/tum-cps/commonroad-vehicle-models), without which this project in its current form would not have been possible.
 
+##
+If you use Driver Dojo in your own work, please cite:
+```bash
+@misc{https://doi.org/10.48550/arxiv.2207.11432,
+  doi = {10.48550/ARXIV.2207.11432},
+  url = {https://arxiv.org/abs/2207.11432},
+  author = {Rietsch, Sebastian and Huang, Shih-Yuan and Kontes, Georgios and Plinge, Axel and Mutschler, Christopher},
+  title = {Driver Dojo: A Benchmark for Generalizable Reinforcement Learning for Autonomous Driving},
+  publisher = {arXiv},
+  year = {2022},
+}
+```
 ## License
 This project is licensed under the [License for Academic Use of Fraunhofer Software, Version 2.0](LICENSE.txt).
 
