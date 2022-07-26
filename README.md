@@ -123,7 +123,7 @@ Besides [SUMO](https://www.eclipse.org/sumo/) and [Carla](https://carla.org/), w
 
 ## References
 If you use Driver Dojo in your own work, please cite:
-```bash
+```latex
 @misc{https://doi.org/10.48550/arxiv.2207.11432,
   doi = {10.48550/ARXIV.2207.11432},
   url = {https://arxiv.org/abs/2207.11432},
