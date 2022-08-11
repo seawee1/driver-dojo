@@ -64,7 +64,8 @@ class SUMOMap:
                         self.lane_graph[to_laneID].incoming.append(self.lane_graph[from_laneID])
 
         for k, v in self.lane_graph.items():
-            self.lane_graph[k] = set(v)
+            self.lane_graph[k].incoming = set(self.lane_graph[k].incoming)
+            self.lane_graph[k].outgoing = set(self.lane_graph[k].outgoing)
 
     def waypoint_on_lane(self, position, laneID):
         lane_node = self.lane_graph[laneID]

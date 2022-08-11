@@ -1,5 +1,4 @@
 import shutil
-import xml.etree.cElementTree as ET
 from os.path import join as pjoin
 import sumolib
 import subprocess

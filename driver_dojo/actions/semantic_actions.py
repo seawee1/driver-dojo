@@ -10,6 +10,10 @@ import driver_dojo.common.runtime_vars as runtime_vars
 class SemanticActions(BaseActions):
     def __init__(self):
         super().__init__()
+        self._num_road_actions = None
+        self._num_speed_actions = None
+        self._num_target_speeds = None
+        self._speed_map = None
         self._target_speed = None
 
     def reset(self):

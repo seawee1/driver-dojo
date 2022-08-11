@@ -7,6 +7,13 @@ from driver_dojo.core.types import ActionSpace
 
 
 class DirectActions(BaseActions):
+    def __init__(self):
+        super().__init__()
+        self.accel_map = None
+        self.steering_map = None
+        self.max_action = None
+        self.min_action = None
+
     def reset(self):
         pass
 
