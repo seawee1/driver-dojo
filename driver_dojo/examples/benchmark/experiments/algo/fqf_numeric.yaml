@@ -24,6 +24,6 @@ params:
     alpha: 0.6
     beta: 0.4
     training_num: 8
-    test_num: 50
+    test_num: null
     device: "cpu"
     seed: 1337

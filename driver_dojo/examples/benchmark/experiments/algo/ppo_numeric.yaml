@@ -22,7 +22,7 @@ params:
     max_batchsize: 256
     action_scaling: True
     max_action: 1
-    step_per_collect: 2048  # 300 steps per parallel env per update for 16 envs
+    step_per_collect: 2048  # divide by training_num to get number of samples per environment thread
     repeat_per_collect: 5
     step_per_epoch: 100000
     epoch: 100

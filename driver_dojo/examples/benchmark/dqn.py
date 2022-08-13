@@ -91,7 +91,9 @@ def train_dqn(
 
     # collector
     train_collector = Collector(policy, train_envs, buf, exploration_noise=True)
-    test_collector = Collector(policy, test_envs, exploration_noise=True)
+    test_collector = None
+    if test_envs:
+        test_collector = Collector(policy, test_envs, exploration_noise=True)
 
     # Initial collecting
     train_collector.collect(n_step=args.batch_size * args.training_num)
@@ -135,24 +137,15 @@ def train_dqn(
         args.epoch,
         args.step_per_epoch,
         args.step_per_collect,
-        args.test_num,
+        args.test_num if args.test_num else 1,
         args.batch_size,
         update_per_step=args.update_per_step,
         train_fn=train_fn,
         test_fn=test_fn,
         save_best_fn=save_best_fn,
         logger=logger,
-        test_in_train=True,
+        test_in_train=(test_envs is not None),
         save_checkpoint_fn=save_checkpoint_fn,
     )
 
     pprint.pprint(result)
-
-    # Let's watch its performance!
-    env = gym.make(args.task)
-    policy.eval()
-    policy.set_eps(args.eps_test)
-    collector = Collector(policy, env)
-    result = collector.collect(n_episode=1, render=args.render)
-    rews, lens = result["rews"], result["lens"]
-    print(f"Final reward: {rews.mean()}, length: {lens.mean()}")
