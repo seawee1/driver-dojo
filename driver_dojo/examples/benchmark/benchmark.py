@@ -41,7 +41,7 @@ def benchmark(config: DictConfig) -> None:
     if obs_config:
         test_config = OmegaConf.merge(test_config, obs_config)
 
-    # Logpath
+    # Log path
     log_path = os.path.join(os.getcwd(), "output")
 
     # Find correct train function

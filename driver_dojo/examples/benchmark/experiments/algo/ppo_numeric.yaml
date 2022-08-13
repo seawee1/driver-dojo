@@ -27,6 +27,6 @@ params:
     step_per_epoch: 100000
     epoch: 100
     training_num: 8
-    test_num: 50
+    test_num: null
     device: "cpu"
     seed: 1337

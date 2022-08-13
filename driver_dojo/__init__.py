@@ -78,19 +78,17 @@ for action_name, base_config, veh_model in [
     ##################
     ### Roundabout ###
     ##################
-    # Driving these scenarios by hand takes about 15 seconds on average.
-    # We give the agent a little extra (in case there is jamming and stuff).
-    max_episode_steps = 200
+    max_episode_steps = 300
     simulation_config = dict(
         max_time_steps=max_episode_steps,
         init_time=0.0,
         init_traffic=True,
         init_traffic_spread=30.0,
         init_traffic_goal_strategy="roundabout",
-        init_traffic_exclude_edges=[],
+        init_traffic_exclude_edges=['in0'],
         init_ego=True,
         init_ego_start_edge="in0",
-        init_ego_goal_edge="out1",  # This way we always have to drive across the intersection
+        init_ego_goal_edge="out*",  # This way we always have to drive across the intersection
         init_ego_strategy="roundabout",
     )
     var_config = dict(
@@ -268,6 +266,48 @@ for action_name, base_config, veh_model in [
 
     register(
         id=f"DriverDojo/{action_name}-{veh_model}-Urban_Intersection-v0",
+        entry_point=f"driver_dojo.core.env:DriverDojoEnv",
+        kwargs=dict(_config=config),
+    )
+
+
+    ########################
+    ### Fraunhofer stuff ###
+    ########################
+    # Demo
+    simulation_config = dict(
+        net_path=pjoin(this_path, "data/scenarios/Carla/Town03/map.net.xml"),
+        route_path=pjoin(this_path, "data/scenarios/Carla/Town03/demo.rou.xml"),
+        max_time_steps=300,
+        init_time=20.0,
+        demand_scale=0.5,
+    )
+    config = deepcopy(base_config)
+    config["simulation"] = simulation_config
+    config["vehicle"]["v_max"] = float(SpeedClass.Urban.value)
+    config = OmegaConf.create(config)
+
+    register(
+        id=f"DriverDojo/{action_name}-{veh_model}-Carla_Town03_Demo-v0",
+        entry_point=f"driver_dojo.core.env:DriverDojoEnv",
+        kwargs=dict(_config=config),
+    )
+
+    # SafeDQN
+    simulation_config = dict(
+        net_path=pjoin(this_path, "data/scenarios/Carla/Town03/Town03.net.xml"),
+        route_path=pjoin(this_path, "data/scenarios/Carla/Town03/Town03ICRA_1.rou.xml"),
+        max_time_steps=300,
+        init_time=20.0,
+        demand_scale=1.0,
+    )
+    config = deepcopy(base_config)
+    config["simulation"] = simulation_config
+    config["vehicle"]["v_max"] = float(SpeedClass.Urban.value)
+    config = OmegaConf.create(config)
+
+    register(
+        id=f"DriverDojo/{action_name}-{veh_model}-Carla_Town03_SafeDQN_RightTurn-v0",
         entry_point=f"driver_dojo.core.env:DriverDojoEnv",
         kwargs=dict(_config=config),
     )

@@ -138,7 +138,7 @@ class VariationConfig:
     vTypeDistribution_args: Optional[str] = None
     emergency_break: bool = False
     emergency_break_interval: float = 10.0
-    traffic_speed: bool = True
+    traffic_speed: bool = False
     traffic_speed_interval: float = 2.0
     traffic_speed_mult_range: Tuple[float, float] = (0.7, 1.3)
 

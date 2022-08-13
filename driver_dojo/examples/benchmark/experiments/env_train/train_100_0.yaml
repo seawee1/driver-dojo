@@ -1,7 +1,0 @@
-observations: {}
-actions: {}
-vehicle: {}
-simulation:
-  seed: 12954
-  seed_num_maps: 100
-  seed_num_traffic: 1

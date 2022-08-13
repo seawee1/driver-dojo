@@ -159,7 +159,9 @@ def train_ppo(
     train_collector = Collector(
         policy, train_envs, VectorReplayBuffer(args.buffer_size, len(train_envs))
     )
-    test_collector = Collector(policy, test_envs)
+    test_collector = None
+    if test_envs:
+        test_collector = Collector(policy, test_envs)
 
     # Log
     writer = SummaryWriter(log_path)
@@ -184,12 +186,12 @@ def train_ppo(
         args.epoch,
         args.step_per_epoch,
         args.repeat_per_collect,
-        args.test_num,
+        args.test_num if args.test_num else 1,
         args.batch_size,
         step_per_collect=args.step_per_collect,
         save_best_fn=save_best_fn,
         logger=logger,
-        test_in_train=True,
+        test_in_train=(test_collector is not None),
         save_checkpoint_fn=save_checkpoint_fn,
     )
 

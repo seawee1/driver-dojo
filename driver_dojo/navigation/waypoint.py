@@ -50,7 +50,7 @@ class Waypoint:
                 )
                 position = np.array([x, y])
                 if np.all(position == position_old):
-                    # print('Warning: Skipped lane during waypoint calculation, which is ill-defined! '
+                    #print('Warning: Skipped lane during waypoint calculation, which is ill-defined! '
                     #      'Please decrease step_size!')
                     break
 
@@ -93,7 +93,6 @@ class Waypoint:
                 if branched or road_option == RoadOptionsExtended.FOLLOW:
                     for waypoint in waypoint_next:
                         if waypoint.on_route:
-                            print(waypoint.lane_node.laneID, waypoint.lane_node.lane.getEdge().getID())
                             waypoints.append(waypoint)
                             branched = True
                             break

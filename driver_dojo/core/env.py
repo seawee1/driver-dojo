@@ -354,7 +354,7 @@ class DriverDojoEnv(gym.Env):
         runtime_vars.sumo_engine.close_engine()
 
     def _calc_target_edge(self, startID, edgeIDs, strat):
-        # TODO: I don't like this whohle . Can definitely be implemented more nicely.
+        # TODO: I don't like this whole . Can definitely be implemented more nicely.
         # Find out proper goal edge
         if strat == "min-or-0":  # Strategy for Highway Scenarios
             if "-" in startID:
@@ -478,6 +478,12 @@ class DriverDojoEnv(gym.Env):
 
         start_edge = runtime_vars.net.getEdge(start_edgeID)
         if goal_edgeID != "":
+            if '*' in goal_edgeID:
+                # TODO: Dirty
+                import random
+                candidates = [x for x in runtime_vars.net.getEdges() if 'out' in x.getID()]
+                goal_edgeID = random.choice(candidates).getID()
+
             goal_edge = runtime_vars.net.getEdge(goal_edgeID)
             route_edges = [
                 edge.getID()

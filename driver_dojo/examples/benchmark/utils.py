@@ -87,11 +87,13 @@ def make_envs(
     train_envs = ShmemVectorEnv(
         [lambda: gym.make(env_name, config=train_config) for _ in range(training_num)]
     )
-    test_envs = ShmemVectorEnv(
-        # Let's not get crazy. We limit the test environments to a maximum of 8.
-        [
-            lambda: gym.make(env_name, config=test_config)
-            for _ in range(min(test_num, 8))
-        ]
-    )
+    test_envs = None
+    if test_num:
+        test_envs = ShmemVectorEnv(
+            # Let's not get crazy. We limit the test environments to a maximum of 8.
+            [
+                lambda: gym.make(env_name, config=test_config)
+                for _ in range(min(test_num, 8))
+            ]
+        )
     return env, train_envs, test_envs

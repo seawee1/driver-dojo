@@ -116,8 +116,28 @@ def build(net, netName="net.net.xml"):
             netName,
             "--default.lanewidth",
             "3.6",
-            "--no-turnarounds",
+            # This is the same as for scenariogeneration maps
+            "--geometry.max-grade.fix",
             "true",
+            "--plain.extend-edge-shape",
+            "true",
+            "--no-turnarounds",
+            "true",  # Who need them anyways?
+            "--default.junctions.keep-clear",
+            "false",
+            "--keep-nodes-unregulated",
+            "false",
+            "--offset.disable-normalization",
+            "false",
+            "--geometry.min-radius.fix",
+            "true",
+            "--check-lane-foes.all",
+            "true",
+            # '--numerical-ids', 'true'
+            '--edges.join', 'true',
+            '--junctions.join', 'true',
+            '--rectangular-lane-cut', 'true',
+            '--geometry.remove', 'true',
         ]
     )
     os.remove(nodesFile.name)
@@ -147,7 +167,7 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
 
         rad_amount = abs(np.arctan2(np.sin(rad_a - rad_b), np.cos(rad_a - rad_b)))
 
-        rads = np.linspace(rad_a, rad_a + rad_amount, endpoint=True, num=50)
+        rads = np.linspace(rad_a, rad_a + rad_amount, endpoint=True, num=20)
         xs, ys = [], []
         for rad in rads:
             x = radius * np.cos(rad) + runtime_vars.np_random_maps.normal(
@@ -162,6 +182,7 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
 
         return xs, ys
 
+    # Create inner nodes
     for i, rad in enumerate(rads_incident):
         x = radius * np.cos(rad)
         y = radius * np.sin(rad)
@@ -171,6 +192,7 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         nodes.append(node)
         net.addNode(node)
 
+    # Inner edges
     edges = []
     for i in range(len(nodes)):
         j = 0 if i + 1 == len(nodes) else i + 1
@@ -183,16 +205,11 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
     in_edges = []
     out_edges = []
     for i in range(len(nodes)):
-        # def StandardParams(cls,x0,y0,t0,k0,kd,s_f):
-        """
-        A method to initialize a Clothoid given a starting point, starting tangent, starting curvature,
-        curvature rate, and final length.
-        """
-        # clothoid0 = Clothoid.G1Hermite(nodes[i].x, nodes[i].y, rads_incident[i], 1, 1, 0)
+        # Edges leading to outside
         clothoid = Clothoid.StandardParams(
             nodes[i].x, nodes[i].y, rads_incident[i] + angles[i], road_cs[i], road_cs[i], lengths[i]
         )
-        xs, ys = clothoid.SampleXY(50)
+        xs, ys = clothoid.SampleXY(10)
 
         xs = [x * squeeze[0] for x in xs]
         ys = [y * squeeze[1] for y in ys]
@@ -213,7 +230,6 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
                 f"{round(x, 2)},{round(y, 2)}" for x, y in zip(xs[::-1], ys[::-1])
             ]
             e.shapes = " ".join(e.shapes)
-            print(e.shapes)
             in_edges.append(e)
             net.addEdge(e)
 
@@ -222,7 +238,6 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
             e = build_edge(f"out{i}", nodes[i], in_node, num_lanes[i][1], lanes)
             e.shapes = [f"{round(x, 2)},{round(y, 2)}" for x, y in zip(xs, ys)]
             e.shapes = " ".join(e.shapes)
-            print(e.shapes)
             out_edges.append(e)
             net.addEdge(e)
 
@@ -240,8 +255,8 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
 
 class RoundaboutSample:
     def __init__(self):
-        self.radius = runtime_vars.np_random_maps.uniform(20.0, 40.0)
-        self.num_incident = runtime_vars.np_random_maps.randint(2, 6)
+        self.radius = runtime_vars.np_random_maps.uniform(10.0, 30.0)  # TODO: This and next changed
+        self.num_incident = runtime_vars.np_random_maps.randint(3, 6)
         self.num_lanes = [
             [
                 runtime_vars.np_random_maps.randint(1, 3),
@@ -261,12 +276,12 @@ class RoundaboutSample:
             + runtime_vars.np_random_maps.normal(0.0, incident_std)
             for i in range(self.num_incident)
         ]
-        self.internal_lanes = runtime_vars.np_random_maps.randint(1, 3)
+        self.internal_lanes = runtime_vars.np_random_maps.randint(1, 2)  # TODO: This has changed
         self.lengths = [
             runtime_vars.np_random_maps.randint(60, 100) for i in range(self.num_incident)
         ]
         self.squeeze = [
-            runtime_vars.np_random_maps.uniform(0.8, 1.2),
-            runtime_vars.np_random_maps.uniform(0.8, 1.2),
+            runtime_vars.np_random_maps.uniform(0.9, 1.1),  # TODO: These two changed
+            runtime_vars.np_random_maps.uniform(0.9, 1.1),
         ]
-        self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0002, 0.0002) for i in range(self.num_incident)]
+        self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0001, 0.0001) for i in range(self.num_incident)]
