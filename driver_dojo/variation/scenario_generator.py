@@ -148,10 +148,19 @@ class ScenarioGenerator:
             j = None
             # Roundabout
             if road_segment == types.GeneratableRoad.Roundabout:
-                sample = RoundaboutSample()
-                create_roundabout(sample.radius, sample.num_lanes, sample.internal_lanes, sample.rads_incident, sample.angles, sample.road_cs, sample.lengths, sample.squeeze)
-                r = []
-                j = []
+                net_verified = False
+                while not net_verified:
+                    sample = RoundaboutSample()
+                    create_roundabout(sample.radius, sample.num_lanes, sample.internal_lanes, sample.rads_incident, sample.angles, sample.road_cs, sample.lengths, sample.squeeze)
+                    try:
+                        net = sumolib.net.readNet(runtime_vars.config.simulation.net_path)
+                        net_verified = True
+                    except:
+                        print("readNet was not possible!")
+                        net_verified = False
+
+                    r = []
+                    j = []
             # Generate intersection
             if road_segment == types.GeneratableRoad.Intersection:
                 zero_cloth = True
