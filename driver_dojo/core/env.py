@@ -387,7 +387,7 @@ class DriverDojoEnv(gym.Env):
         elif strat == "roundabout":
             if "out" in startID:
                 return None
-            edgeIDs = [id for id in edgeIDs if "out" in id]
+            edgeIDs = [id for id in edgeIDs if "out" in id and id != 'out0']
             target_edge = runtime_vars.np_random_traffic.choice(edgeIDs)
         else:
             raise NotImplementedError
