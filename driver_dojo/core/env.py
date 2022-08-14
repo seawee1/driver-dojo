@@ -387,7 +387,7 @@ class DriverDojoEnv(gym.Env):
         elif strat == "roundabout":
             if "out" in startID:
                 return None
-            edgeIDs = [id for id in edgeIDs if "out" in id and id != 'out0']
+            edgeIDs = [id for id in edgeIDs if "out" in id]
             target_edge = runtime_vars.np_random_traffic.choice(edgeIDs)
         else:
             raise NotImplementedError
@@ -481,7 +481,7 @@ class DriverDojoEnv(gym.Env):
             if '*' in goal_edgeID:
                 # TODO: Dirty
                 import random
-                candidates = [x for x in runtime_vars.net.getEdges() if 'out' in x.getID()]
+                candidates = [x for x in runtime_vars.net.getEdges() if 'out' in x.getID() and x.getID() != 'out0']
                 goal_edgeID = random.choice(candidates).getID()
 
             goal_edge = runtime_vars.net.getEdge(goal_edgeID)
@@ -502,7 +502,7 @@ class DriverDojoEnv(gym.Env):
         departPos = (
             runtime_vars.config.vehicle.start_offset
             if runtime_vars.config.vehicle.start_offset
-            else "free"
+            else "random"
         )
         departSpeed = (
             runtime_vars.config.vehicle.start_velocity
