@@ -82,7 +82,7 @@ def train_ppo(
             critic = Critic(net_b, device=args.device,).to(args.device)
             actor_critic = ActorCritic(actor, critic)
 
-        elif isinstance(env.action_space, gym.spaces.discrete):
+        else:
             from tianshou.utils.net.discrete import Actor, Critic
 
             net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
