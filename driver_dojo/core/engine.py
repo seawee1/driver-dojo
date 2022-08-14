@@ -17,6 +17,7 @@ import driver_dojo.common.runtime_vars as runtime_vars
 class SUMOEngine:
     def __init__(self):
         self.running = False
+        self.carla_simulation = None
         self.additional_paths = ""
 
     def init_engine(self):
@@ -43,8 +44,6 @@ class SUMOEngine:
             "none",  # Collisions are dealt with by driver_dojo.common.collision_detection
             "--scale",
             str(runtime_vars.config["simulation"]["demand_scale"]),
-            "--xml-validation",
-            "never",
             "--time-to-impatience",
             str(runtime_vars.config["simulation"]["time_to_impatience"]),
             "--gui-settings-file",
@@ -55,6 +54,8 @@ class SUMOEngine:
             runtime_vars.config["simulation"]["car_following_model"].value,
             "--lanechange.overtake-right",
             "false",
+            "--xml-validation", "never",
+            "--xml-validation.net", "always"
         ]
         sumoCmd += (
             ["--tls.all-off", "true"]
@@ -124,8 +125,42 @@ class SUMOEngine:
             # Resets simulator to initial state
             runtime_vars.traci.load(sumoCmd)
 
-        # self.generator_thread = Thread(target=self.generate, args=())
-        # self.generator_thread.start()
+
+        if runtime_vars.config.simulation.co_sim_to_carla:
+            if self.carla_simulation is None:
+                # Start a Carla server
+                carla_executable = runtime_vars.config.simulation.carla_path
+                carla_start_cmd = [
+                    carla_executable,
+                    '-carla-rpc-port=3000',
+                    #'-carla-server',
+                    #-benchmark -fps=<framerate>'
+                ]
+                p = subprocess.Popen(
+                   carla_start_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+                )
+                print("Started server")
+                import time
+                time.sleep(10)
+
+                # Create the CarlaSimulation object
+                from driver_dojo.carla_integration.carla_simulation import CarlaSimulation
+                self.carla_simulation = CarlaSimulation('127.0.0.1', 3000, 0.2)
+                print("Established client")
+
+
+                from driver_dojo.carla_integration.bridge_helper import BridgeHelper
+                BridgeHelper.blueprint_library = self.carla_simulation.world.get_blueprint_library()
+
+                # Configuring carla simulation in sync mode.
+                settings = self.carla_simulation.world.get_settings()
+                settings.synchronous_mode = True
+                settings.fixed_delta_seconds = runtime_vars.config.simulation.dt
+                self.carla.world.apply_settings(settings)
+
+            # We have to grab this again and again
+            BridgeHelper.offset = runtime_vars.net.getLocationOffset()
+
         return runtime_vars.traci
 
     def close_engine(self):
