@@ -10,14 +10,15 @@ params:
         - 256
         - 256
     reward_normalization: False
-    step_per_collect: 8 # divide by training_num to get number of samples per environment thread
+    step_per_collect: 8
     update_per_step: 0.125
     step_per_epoch: 100000
     epoch: 100
     training_num: 8
-    test_num: null
+    test_num: 200
     device: "cpu"
     seed: 1337
+    # SAC specific
     auto_alpha: False
     tau: 0.005
     alpha: 0.2

@@ -857,14 +857,12 @@ class DriverDojoEnv(gym.Env):
         info = dict(
             cost=(1 if ego_collided else 0),  # Many safety-related methods need this
             level_seed=runtime_vars.level_seed,  # Methods like PLR make use of this
+            time_step=runtime_vars.time_step,
+            reached_goal=at_goal,
+            collision=ego_collided,  # For stats
             timeout=timeout,
-            done_checks=dict(
-                collision=ego_collided,  # For stats
-                arrived_at_goal=at_goal,
-                off_route=off_route,
-                time_step=runtime_vars.time_step,
-                timeout_standing_still=timeout_standing_still,
-            ),
+            timeout_standing_still=timeout_standing_still,
+            off_route=off_route,
         )
 
         return reward, done, info
