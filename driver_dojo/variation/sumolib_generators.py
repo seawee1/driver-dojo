@@ -253,9 +253,9 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
 
 class RoundaboutSample:
     def __init__(self):
-        self.num_incident = runtime_vars.np_random_maps.randint(2, 6)
+        self.num_incident = runtime_vars.np_random_maps.randint(3, 6)
         self.radius = runtime_vars.np_random_maps.uniform(10.0, 30.0)  # TODO: This and next changed
-        self.radius = max(self.num_incident*10.0, self.radius)
+        self.radius = max(self.num_incident*11.0, self.radius)
         self.num_lanes = [
             [
                 runtime_vars.np_random_maps.randint(1, 3),
@@ -277,10 +277,10 @@ class RoundaboutSample:
         ]
         self.internal_lanes = runtime_vars.np_random_maps.randint(1, 3)
         self.lengths = [
-            runtime_vars.np_random_maps.randint(50, 120) for i in range(self.num_incident)
+            runtime_vars.np_random_maps.randint(70, 120) for i in range(self.num_incident)
         ]
         self.squeeze = [
-            runtime_vars.np_random_maps.uniform(0.7, 1.3), # This changed
-            runtime_vars.np_random_maps.uniform(0.7, 1.3),
+            runtime_vars.np_random_maps.uniform(0.8, 1.2), # This changed
+            runtime_vars.np_random_maps.uniform(0.8, 1.2),
         ]
         self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0003, 0.0003) for i in range(self.num_incident)]
