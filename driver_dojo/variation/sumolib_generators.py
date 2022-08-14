@@ -127,17 +127,13 @@ def build(net, netName="net.net.xml"):
             "false",
             "--keep-nodes-unregulated",
             "false",
-            "--offset.disable-normalization",
-            "false",
             "--geometry.min-radius.fix",
             "true",
             "--check-lane-foes.all",
             "true",
-            # '--numerical-ids', 'true'
-            '--edges.join', 'true',
-            '--junctions.join', 'true',
+            #'--edges.join', 'true',
+            #'--junctions.join', 'true',
             '--rectangular-lane-cut', 'true',
-            '--geometry.remove', 'true',
         ]
     )
     os.remove(nodesFile.name)
@@ -156,7 +152,7 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
     defaultEdge = Edge(numLanes=2, maxSpeed=13.0)
     net = Net(None, defaultEdge)
 
-    perturb_std = 0.005
+    perturb_std = 0.000
     nodes = []
 
     def sample_arc(rad_a, rad_b):
@@ -167,16 +163,17 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
 
         rad_amount = abs(np.arctan2(np.sin(rad_a - rad_b), np.cos(rad_a - rad_b)))
 
-        rads = np.linspace(rad_a, rad_a + rad_amount, endpoint=True, num=20)
+        num = int(rad_amount / (2*np.pi / 60.0))
+        rads = np.linspace(rad_a, rad_a + rad_amount, endpoint=True, num=num)
         xs, ys = [], []
         for rad in rads:
-            x = radius * np.cos(rad) + runtime_vars.np_random_maps.normal(
-                0.0, perturb_std
-            )
+            x = radius * np.cos(rad) #+ runtime_vars.np_random_maps.normal(
+                #0.0, perturb_std
+            #)
             x *= squeeze[0]
-            y = radius * np.sin(rad) + runtime_vars.np_random_maps.normal(
-                0.0, perturb_std
-            )
+            y = radius * np.sin(rad) #+ runtime_vars.np_random_maps.normal(
+                #0.0, perturb_std
+            #)
             y *= squeeze[1]
             xs.append(x), ys.append(y)
 
@@ -200,14 +197,13 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         e = build_edge(f"{i}", nodes[i], nodes[j], internal_lanes, lanes)
         # e = net.buildEdge(nodes[i], nodes[j])
         edges.append(e)
-        net.addEdge(e)
 
     in_edges = []
     out_edges = []
     for i in range(len(nodes)):
         # Edges leading to outside
         clothoid = Clothoid.StandardParams(
-            nodes[i].x, nodes[i].y, rads_incident[i] + angles[i], road_cs[i], road_cs[i], lengths[i]
+            nodes[i].x, nodes[i].y, rads_incident[i] + angles[i], 0.0, road_cs[i], lengths[i]
         )
         xs, ys = clothoid.SampleXY(10)
 
@@ -249,14 +245,16 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         xs, ys = sample_arc(rads_incident[i], rads_incident[j])
         e.shapes = [f"{x},{y}" for x, y in zip(xs, ys)]
         e.shapes = " ".join(e.shapes)
+        net.addEdge(e)
 
     build(net, netName=runtime_vars.config.simulation.net_path)
 
 
 class RoundaboutSample:
     def __init__(self):
-        self.radius = runtime_vars.np_random_maps.uniform(10.0, 30.0)  # TODO: This and next changed
         self.num_incident = runtime_vars.np_random_maps.randint(3, 6)
+        self.radius = runtime_vars.np_random_maps.uniform(10.0, 30.0)  # TODO: This and next changed
+        self.radius = max(self.num_incident*6.0, self.radius)
         self.num_lanes = [
             [
                 runtime_vars.np_random_maps.randint(1, 3),
@@ -265,23 +263,23 @@ class RoundaboutSample:
             for _ in range(self.num_incident)
         ]
         angle_mean = 0.0
-        angle_std = 0.15
+        angle_std = 0.0 #0.15  # TODO: This changed
         self.angles = [
             runtime_vars.np_random_maps.normal(angle_mean, angle_std)
             for i in range(self.num_incident)
         ]
-        incident_std = 0.1
+        incident_std = 0.15  # This changed
         self.rads_incident = [
             i * 2 * np.pi / self.num_incident
             + runtime_vars.np_random_maps.normal(0.0, incident_std)
             for i in range(self.num_incident)
         ]
-        self.internal_lanes = runtime_vars.np_random_maps.randint(1, 2)  # TODO: This has changed
+        self.internal_lanes = runtime_vars.np_random_maps.randint(1, 3)
         self.lengths = [
             runtime_vars.np_random_maps.randint(60, 100) for i in range(self.num_incident)
         ]
         self.squeeze = [
-            runtime_vars.np_random_maps.uniform(0.9, 1.1),  # TODO: These two changed
-            runtime_vars.np_random_maps.uniform(0.9, 1.1),
+            runtime_vars.np_random_maps.uniform(0.8, 1.2), # This changed
+            runtime_vars.np_random_maps.uniform(0.8, 1.2),
         ]
-        self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0001, 0.0001) for i in range(self.num_incident)]
+        self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0003, 0.0003) for i in range(self.num_incident)]

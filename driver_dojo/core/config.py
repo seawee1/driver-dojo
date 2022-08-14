@@ -61,6 +61,8 @@ class SimulationConfig:
         str
     ] = None  # Will copy every map (.net.xml and .xodr file) to the folder specified by 'store_for_plotting'
     time_to_teleport: Optional[float] = -1
+    co_sim_to_carla: bool = False
+    carla_path: str = "C:\\Users\\seegras\\Portables\\CARLA_0.9.13\\WindowsNoEditor\\CarlaUE4.exe"
 
 
 @dataclass
@@ -190,6 +192,7 @@ class NavigationConfig:
 @dataclass
 class RewardConfig:
     timeout_penalty: float = -10.0
+    driving_circles_penalty: float = -10.0
     collision_penalty: float = -10.0
     stand_still_penalty: float = 0.0
     goal_reward: float = 10.0

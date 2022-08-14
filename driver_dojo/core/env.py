@@ -808,6 +808,11 @@ class DriverDojoEnv(gym.Env):
             if distance_to_lane > 5.0:
                 off_route = True
 
+        # Check if driving in circles
+        driving_in_circles = False
+        if abs(runtime_vars.vehicle.angle) > 4 * 2 * np.pi:
+            driving_in_circles = True
+
         # Timeouts
         timeout = (
                 self.time_step > runtime_vars.config["simulation"]["max_time_steps"]
@@ -829,6 +834,8 @@ class DriverDojoEnv(gym.Env):
             reward = reward_config["off_route_penalty"]
         elif timeout or timeout_standing_still:
             reward = reward_config["timeout_penalty"]
+        elif driving_in_circles:
+            reward = reward_config["driving_circles_penalty"]
         else:
             # Speed reward
             reward += (
@@ -844,7 +851,7 @@ class DriverDojoEnv(gym.Env):
                 reward += reward_config["sub_goal_reward"]
 
         ### Done
-        done = timeout or timeout_standing_still or at_goal or off_route or ego_collided
+        done = timeout or timeout_standing_still or at_goal or off_route or ego_collided or driving_in_circles
 
         ### Info
         info = dict(
