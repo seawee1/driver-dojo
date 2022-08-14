@@ -20,7 +20,7 @@ params:
     max_grad_norm: null
     reward_normalization: False
     max_batchsize: 256
-    action_scaling: True
+    action_scaling: False
     max_action: 1
     step_per_collect: 2048  # divide by training_num to get number of samples per environment thread
     repeat_per_collect: 5

@@ -89,6 +89,8 @@ class Client:
         try:
             while True:
                 action = len(key_action_map.keys())
+                if continuous_actions:
+                    action = [0.0, 0.0]
                 if eventQueue.qsize() == 0:
                     pass
                 if eventQueue.qsize():
@@ -137,6 +139,7 @@ if __name__ == "__main__":
         ),
     )
 
+    continuous_actions = False
     if "Sem" in env_name:
         config["actions"] = dict(
             space="Semantic",
@@ -160,9 +163,8 @@ if __name__ == "__main__":
         # 0: full-right steering, 1: full-left steering, 2: full-decel, 4: full-accel, 5: noop
         key_action_map = dict(d=0, a=1, s=2, w=3)
     else:
-        raise ValueError(
-            "Only 'Sem' and 'Disc' environments are supported for manual controlling!"
-        )
+        continuous_actions = True
+        key_action_map = dict(d=[-1.0, 0.0], a=[1.0, 0.0], s=[0.0, -1.0], w=[0.0, 1.0])
 
     # Overwrite based config with CLI arguments
     config = OmegaConf.merge(config, conf)

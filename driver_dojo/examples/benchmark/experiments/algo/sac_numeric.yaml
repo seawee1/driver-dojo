@@ -1,4 +1,4 @@
-name: "sac_disc"
+name: "sac"
 params:
     buffer_size: 100000
     lr: 0.0003
@@ -21,3 +21,4 @@ params:
     auto_alpha: False
     tau: 0.005
     alpha: 0.2
+    exploration_noise: 0.2

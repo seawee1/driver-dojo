@@ -7,15 +7,14 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from tianshou.data import Collector, VectorReplayBuffer
-from tianshou.policy import DiscreteSACPolicy
+from tianshou.policy import DiscreteSACPolicy, SACPolicy
 from tianshou.trainer import offpolicy_trainer
 from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
-from tianshou.utils.net.discrete import Actor, Critic
 
 from driver_dojo.examples.benchmark.utils import make_envs, evaluate_agent
 
-def train_sac_disc(
+def train_sac(
         env_name,
         algo_config,
         train_config,
@@ -40,6 +39,11 @@ def train_sac_disc(
 
     state_shape = env.observation_space.shape or env.observation_space.n
     action_shape = env.action_space.shape or env.action_space.n
+    discrete_actions = isinstance(env.action_space, gym.spaces.Discrete)
+    if discrete_actions:
+        from tianshou.utils.net.discrete import Actor, Critic
+    else:
+        from tianshou.utils.net.continuous import ActorProb, Critic
 
     # Seed
     np.random.seed(args.seed)
@@ -47,16 +51,26 @@ def train_sac_disc(
 
     # model
     net = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-    actor = Actor(net, action_shape, softmax_output=False,
-                  device=args.device).to(args.device)
+    if discrete_actions:
+        actor = Actor(net, action_shape, softmax_output=False, device=args.device).to(args.device)
+    else:
+        actor = ActorProb(net, action_shape, max_action=1, device=args.device, unbounded=False)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.lr)
-    net_c1 = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-    critic1 = Critic(net_c1, last_size=action_shape,
-                     device=args.device).to(args.device)
+
+    if discrete_actions:
+        net_c1 = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        critic1 = Critic(net_c1, last_size=action_shape, device=args.device).to(args.device)
+    else:
+        net_c1 = Net(state_shape, action_shape, hidden_sizes=args.hidden_sizes, concat=True, device=args.device)
+        critic1 = Critic(net_c1, device=args.device).to(args.device)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.lr)
-    net_c2 = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-    critic2 = Critic(net_c2, last_size=action_shape,
-                     device=args.device).to(args.device)
+
+    if discrete_actions:
+        net_c2 = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        critic2 = Critic(net_c2, last_size=action_shape, device=args.device).to(args.device)
+    else:
+        net_c2 = Net(state_shape, action_shape, hidden_sizes=args.hidden_sizes, concat=True, device=args.device)
+        critic2 = Critic(net_c2, device=args.device).to(args.device)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.lr)
 
     # better not to use auto alpha in CartPole
@@ -66,18 +80,35 @@ def train_sac_disc(
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
-    policy = DiscreteSACPolicy(
-        actor,
-        actor_optim,
-        critic1,
-        critic1_optim,
-        critic2,
-        critic2_optim,
-        args.tau,
-        args.gamma,
-        args.alpha,
-        reward_normalization=args.reward_normalization
-    )
+    if discrete_actions:
+        policy = DiscreteSACPolicy(
+            actor,
+            actor_optim,
+            critic1,
+            critic1_optim,
+            critic2,
+            critic2_optim,
+            args.tau,
+            args.gamma,
+            args.alpha,
+            reward_normalization=args.reward_normalization
+        )
+    else:
+        from tianshou.exploration import GaussianNoise
+        policy = SACPolicy(
+            actor,
+            actor_optim,
+            critic1,
+            critic1_optim,
+            critic2,
+            critic2_optim,
+            tau=args.tau,
+            gamma=args.gamma,
+            alpha=args.alpha,
+            reward_normalization=args.reward_normalization,
+            exploration_noise=GaussianNoise(sigma=args.exploration_noise),
+            action_space=env.action_space
+        )
     # collector
     train_collector = Collector(
         policy, train_envs, VectorReplayBuffer(args.buffer_size, len(train_envs))

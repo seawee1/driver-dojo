@@ -5,7 +5,7 @@ from omegaconf import OmegaConf, DictConfig
 from driver_dojo.examples.benchmark.dqn import train_dqn
 from driver_dojo.examples.benchmark.ppo import train_ppo
 from driver_dojo.examples.benchmark.fqf import train_fqf
-from driver_dojo.examples.benchmark.sac_disc import train_sac_disc
+from driver_dojo.examples.benchmark.sac import train_sac
 
 
 @hydra.main(version_base=None, config_path="experiments", config_name="config")
@@ -53,8 +53,8 @@ def benchmark(config: DictConfig) -> None:
         train_fn = train_ppo
     elif algo_name == "fqf" or algo_name == "FQF":
         train_fn = train_fqf
-    elif algo_name == 'sac_disc' or algo_name == 'SAC_Disc':
-        train_fn = train_sac_disc
+    elif algo_name == 'sac' or algo_name == 'SAC':
+        train_fn = train_sac
     else:
         # It is straightforward to integrate more algorithms.
         # Adapt the implementations from: https://github.com/thu-ml/tianshou/tree/master/test
