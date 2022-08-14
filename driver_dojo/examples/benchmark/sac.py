@@ -153,7 +153,7 @@ def train_sac(
                     f"{self._prefix}/collision": np.mean(self._stats['collision']),
                     f"{self._prefix}/off_route": np.mean(self._stats['off_route']),
                 }
-                self._logger.write(f"{self._prefix}/env_step", self._step, log_data)
+                self._logger.write(f"{self._prefix}/env_step", self._step if not hasattr(self, '_step_overwrite') else self._step_overwrite, log_data)
 
                 if self._empty_after_log:
                     for k, v in self._stats.items():
@@ -177,7 +177,7 @@ def train_sac(
         torch.save(policy.state_dict(), os.path.join(log_path, 'policy.pth'))
 
     def test_fn(epoch, env_step):
-        test_stats._step = env_step
+        test_stats._step_overwrite = env_step
 
     # trainer
     result = offpolicy_trainer(
