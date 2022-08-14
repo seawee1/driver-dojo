@@ -114,28 +114,29 @@ def build(net, netName="net.net.xml"):
             connectionsFile.name,
             "-o",
             netName,
-            "--default.lanewidth",
-            "3.6",
-            # This is the same as for scenariogeneration maps
-            "--geometry.max-grade.fix",
-            "true",
-            "--plain.extend-edge-shape",
-            "true",
-            "--no-turnarounds",
-            "true",  # Who need them anyways?
-            "--default.junctions.keep-clear",
-            "false",
-            "--keep-nodes-unregulated",
-            "false",
-            "--geometry.min-radius.fix",
-            "true",
-            "--check-lane-foes.all",
-            "true",
+            #"--default.lanewidth",
+            #"3.6",
+            #"--geometry.max-grade.fix",
+            #"true",
+            #"--plain.extend-edge-shape",
+            #"true",
+            #"--no-turnarounds",
+            #"true",  # Who need them anyways?
+            #"--default.junctions.keep-clear",
+            #"false",
+            #"--keep-nodes-unregulated",
+            #"false",
+            #"--geometry.min-radius.fix",
+            #"true",
+            #"--check-lane-foes.all",
+            #"true",
             #'--edges.join', 'true',
             #'--junctions.join', 'true',
-            '--rectangular-lane-cut', 'true',
+            #'--rectangular-lane-cut', 'true',
         ]
     )
+    import time
+    time.sleep(1)
     os.remove(nodesFile.name)
     os.remove(edgesFile.name)
     os.remove(connectionsFile.name)
