@@ -269,7 +269,7 @@ class TrafficManager:
             #     1:  lane permissions are ignored when mapping
             #     0:  The vehicle is mapped only to lanes that allow it's vehicle class
             runtime_vars.traci.vehicle.moveToXY(
-                id, edgeID, lane_index, x, y, angle=yaw, keepRoute=3
+                id, edgeID, lane_index, x, y, angle=yaw, keepRoute=1
             )
 
         # Speed

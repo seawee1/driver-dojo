@@ -120,8 +120,8 @@ def build(net, netName="net.net.xml"):
             #"true",
             #"--plain.extend-edge-shape",
             #"true",
-            #"--no-turnarounds",
-            #"true",  # Who need them anyways?
+            "--no-turnarounds",
+            "true",  # Who need them anyways?
             #"--default.junctions.keep-clear",
             #"false",
             #"--keep-nodes-unregulated",
@@ -270,11 +270,26 @@ class RoundaboutSample:
             for i in range(self.num_incident)
         ]
         incident_std = 0.15  # This changed
-        self.rads_incident = [
-            i * 2 * np.pi / self.num_incident
-            + runtime_vars.np_random_maps.normal(0.0, incident_std)
-            for i in range(self.num_incident)
-        ]
+        def draw_rads():
+            rads_incident = [
+                i * 2 * np.pi / self.num_incident
+                + runtime_vars.np_random_maps.normal(0.0, incident_std)
+                for i in range(self.num_incident)
+            ]
+            return rads_incident
+        def check_rads(rads):
+            for i in range(len(rads)):
+                j = i+1
+                if i == len(rads) - 1:
+                    j = 0
+                if np.abs(rads[i] - rads[j]) < (np.pi / 4):
+                    return False
+            return True
+        while True:
+            self.rads_incident = draw_rads()
+            if check_rads(self.rads_incident):
+                break
+
         self.internal_lanes = runtime_vars.np_random_maps.randint(1, 3)
         self.lengths = [
             runtime_vars.np_random_maps.randint(70, 120) for i in range(self.num_incident)
