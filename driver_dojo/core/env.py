@@ -502,7 +502,7 @@ class DriverDojoEnv(gym.Env):
         departPos = (
             runtime_vars.config.vehicle.start_offset
             if runtime_vars.config.vehicle.start_offset
-            else "random"
+            else "free"
         )
         departSpeed = (
             runtime_vars.config.vehicle.start_velocity
@@ -512,7 +512,7 @@ class DriverDojoEnv(gym.Env):
         departLane = (
             runtime_vars.config.vehicle.lane_offset
             if runtime_vars.config.vehicle.lane_offset
-            else "random"
+            else "free"
         )
 
         runtime_vars.traci.route.add(routeID, route_edges)
