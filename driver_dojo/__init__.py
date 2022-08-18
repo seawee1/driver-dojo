@@ -181,6 +181,7 @@ for action_name, base_config, veh_model in [
         traffic_routing_goal_strategy="same",
     )
     config = deepcopy(base_config)
+    config['vehicle']['start_offset'] = 10.0
     config["variation"] = var_config
     config["simulation"] = simulation_config
     config["vehicle"]["v_max"] = float(SpeedClass.Highway.value)

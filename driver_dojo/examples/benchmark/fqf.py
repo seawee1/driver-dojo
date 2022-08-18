@@ -14,7 +14,7 @@ from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
 from tianshou.utils.net.discrete import FractionProposalNetwork, FullQuantileFunction
 
-from driver_dojo.examples.benchmark.utils import make_envs, evaluate_agent
+from driver_dojo.examples.benchmark.utils import make_envs, StatsLogger
 
 
 def train_fqf(
@@ -23,10 +23,8 @@ def train_fqf(
     train_config,
     test_config,
     log_path,
-    model_path=None,
-    on_test_set=False,
+    eval=False,
 ):
-    evaluate = model_path is not None
     args = algo_config
     # Create probe, train and test environments
     training_num, test_num = algo_config.training_num, algo_config.test_num
@@ -36,8 +34,6 @@ def train_fqf(
         test_config,
         training_num,
         test_num,
-        evaluate=evaluate,
-        on_test_set=on_test_set,
     )
 
     state_shape = env.observation_space.shape or env.observation_space.n
@@ -76,11 +72,6 @@ def train_fqf(
         args.n_step,
         target_update_freq=args.target_update_freq,
     ).to(args.device)
-
-    if evaluate:
-        evaluate_agent(env, policy, model_path, on_test_set)
-        env.close()
-        return
 
     # buffer
     if args.prioritized_replay:

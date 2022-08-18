@@ -14,7 +14,7 @@ from tianshou.trainer import onpolicy_trainer
 from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import ActorCritic, DataParallelNet, Net
 
-from driver_dojo.examples.benchmark.utils import make_envs, evaluate_agent
+from driver_dojo.examples.benchmark.utils import make_envs, StatsLogger, make_collectors
 from driver_dojo.examples.benchmark.atari_network import DQN
 
 
@@ -24,12 +24,10 @@ def train_ppo(
     train_config,
     test_config,
     log_path,
-    model_path=None,
-    on_test_set=False,
+    eval=False,
+    eval_file=None,
 ):
-    evaluate = model_path is not None
     args = algo_config
-    # Create probe, train and test environments
     training_num, test_num = algo_config.training_num, algo_config.test_num
     env, train_envs, test_envs = make_envs(
         env_name,
@@ -37,8 +35,6 @@ def train_ppo(
         test_config,
         training_num,
         test_num,
-        evaluate=evaluate,
-        on_test_set=on_test_set,
     )
 
     # Probe the environment and close
@@ -53,7 +49,6 @@ def train_ppo(
     visual = False
     if "visual" in args:
         visual = args.visual
-    print(visual)
     if visual and isinstance(env.action_space, gym.spaces.Discrete):
         from tianshou.utils.net.discrete import Actor, Critic
 
@@ -97,12 +92,6 @@ def train_ppo(
                 critic = Critic(net_b, device=args.device).to(args.device)
             actor_critic = ActorCritic(actor, critic)
 
-    # orthogonal initialization
-    # for m in actor_critic.modules():
-    #     if isinstance(m, torch.nn.Linear):
-    #         torch.nn.init.orthogonal_(m.weight)
-    #         torch.nn.init.zeros_(m.bias)
-
     # Optimizer
     optim = torch.optim.Adam(actor_critic.parameters(), lr=args.lr)
 
@@ -120,12 +109,10 @@ def train_ppo(
         )
 
     if isinstance(env.action_space, gym.spaces.Box):
-
         def dist(*logits):
             return torch.distributions.Independent(
                 torch.distributions.Normal(*logits), 1
             )
-
     elif isinstance(env.action_space, gym.spaces.Discrete):
         dist = torch.distributions.Categorical
 
@@ -145,27 +132,31 @@ def train_ppo(
         reward_normalization=args.reward_normalization,
         action_space=env.action_space,
         action_scaling=algo_config.action_scaling,
-        deterministic_eval=True,
+        deterministic_eval=False,
         advantage_normalization=args.advantage_normalization,
         recompute_advantage=args.recompute_advantage,
     )
 
-    if evaluate:
-        evaluate_agent(env, policy, model_path, on_test_set)
-        env.close()
-        return
-
-    # Collectors
-    train_collector = Collector(
-        policy, train_envs, VectorReplayBuffer(args.buffer_size, len(train_envs))
-    )
-    test_collector = None
-    if test_envs:
-        test_collector = Collector(policy, test_envs)
-
     # Log
     writer = SummaryWriter(log_path)
     logger = TensorboardLogger(writer)
+
+    train_collector, test_collector, train_stats, test_stats = make_collectors(**locals())
+
+    if eval:
+        policy.load_state_dict(torch.load(os.path.join(log_path, 'policy.pth')), strict=False)
+        test_collector.collect(n_episode=test_num)
+        env.close()
+        test_envs.close()
+        train_envs.close() if train_envs else None
+        return
+
+    def train_fn(epoch, env_step):
+        policy.train() if not policy.training else None
+
+    def test_fn(epoch, env_step):
+        test_stats._step_overwrite = env_step
+        policy.eval()
 
     def save_best_fn(policy):
         torch.save(policy.state_dict(), os.path.join(log_path, "policy.pth"))
@@ -175,10 +166,7 @@ def train_ppo(
         torch.save({"model": policy.state_dict()}, ckpt_path)
         return ckpt_path
 
-    # We can close the probe env now
-
     env.close()
-    # trainer
     result = onpolicy_trainer(
         policy,
         train_collector,
@@ -190,6 +178,8 @@ def train_ppo(
         args.batch_size,
         step_per_collect=args.step_per_collect,
         save_best_fn=save_best_fn,
+        train_fn=train_fn,
+        test_fn=test_fn,
         logger=logger,
         test_in_train=(test_collector is not None),
         save_checkpoint_fn=save_checkpoint_fn,

@@ -18,10 +18,6 @@ def benchmark(config: DictConfig) -> None:
     algo_config = config.algo.params
     algo_name = config.algo.name
 
-    model_path = None
-    if "model_path" in config:
-        model_path = config.model_path
-
     # Setup external environment configurations
     obs_config = None
     if "obs" in config:
@@ -62,6 +58,9 @@ def benchmark(config: DictConfig) -> None:
             "This algorithm isn't yet implemented for the benchmark!"
         )
 
+    eval = ('eval' in config and config['eval'])
+    eval_file = config['eval_file'] if eval else 'results.yaml'
+
     # Start training
     train_fn(
         env_name,
@@ -69,20 +68,9 @@ def benchmark(config: DictConfig) -> None:
         train_config,
         test_config,
         log_path,
-        model_path=model_path,
-        on_test_set=False,
+        eval=eval,
+        eval_file=eval_file
     )
-
-    # if model_path is not None:
-    #     train_fn(
-    #         env_name,
-    #         algo_config,
-    #         train_config,
-    #         test_config,
-    #         log_path,
-    #         model_path=model_path,
-    #         on_test_set=True,
-    #     )
 
 
 if __name__ == "__main__":

@@ -1,99 +1,154 @@
 import gym
 from tianshou.env import ShmemVectorEnv
 from tianshou.data import Collector, VectorReplayBuffer, Batch
-
-eps_rew = 0.0
-arrived_at_goal = False
-collision = False
-off_route = False
-time_step = 0
-first_run = True
-results = []
-resets = 0
+from collections import deque
+import numpy as np
 
 
-def preprocess_fn(**kwargs):
-    # modify info before adding into the buffer, and recorded into tfb
-    # if obs && env_id exist -> reset
-    # if obs_next/rew/done/info/env_id exist -> normal step
-    global eps_rew, first_run, arrived_at_goal, collision, off_route, time_step, resets, results
-    reset = "obs" in kwargs
+class StatsLogger:
+    def __init__(self, is_train, logger, buffer_size=100, log_interval=5000, num_episodes=None, empty_after_log=True, log_path=None):
+        self._prefix = 'train' if is_train else 'test'
+        self._logger = logger
+        self._log_interval = log_interval
+        self._num_episodes = num_episodes
+        assert self._log_interval is None or self._num_episodes is None
+        self._empty_after_log = empty_after_log
+        self._buffer_size = buffer_size
+        self._step = 0
+        self._step_last_log = 0
+        self._log_path = log_path
 
-    if reset:
-        if not first_run:
-            results.append(
-                f"{eps_rew},{collision},{off_route},{arrived_at_goal},{time_step}\n"
-            )
-            resets += 1
-        eps_rew = 0.0
-        arrived_at_goal = False
-        collision = False
-        off_route = False
-        first_run = False
-        time_step = 0
-    else:
-        info = kwargs["info"]["done_checks"]
-        eps_rew += kwargs["rew"][0]
-        collision = info["collision"][0]
-        off_route = info["off_route"][0]
-        arrived_at_goal = info["arrived_at_goal"][0]
-        time_step = info["time_step"][0]
+        self._rews = None
+        self._lens = None
+        self._stats = dict(
+            rews=deque(maxlen=buffer_size),
+            lens=deque(maxlen=buffer_size),
+            reached_goal=deque(maxlen=buffer_size),
+            collision=deque(maxlen=buffer_size),
+            off_route=deque(maxlen=buffer_size),
+            timeout=deque(maxlen=buffer_size),
+            timeout_standing_still=deque(maxlen=buffer_size),
+        )
 
-    return Batch()
+    def preprocess_fn(self, **kwargs):
+        # modify info before adding into the buffer, and recorded into tfb
+        # if obs && env_id exist -> reset
+        # if obs_next/rew/done/info/env_id exist -> normal step
+        n_envs = len(kwargs['env_id'])
+        self._step += n_envs
+        print(kwargs)
+        if self._rews is None:
+            print(n_envs)
+            self._rews = np.zeros(n_envs)
+            self._lens = np.zeros(n_envs)
+            # self._rews = {env_id: 0.0 for env_id in kwargs['env_id']}
+            # self._lens = {env_id: 0.0 for env_id in kwargs['env_id']}
 
+        # Log reward and eps len
+        if 'obs_next' in kwargs:
+            self._rews[kwargs['env_id']] += kwargs['rew']
+            self._lens[kwargs['env_id']] += 1.0
+            for i in np.argwhere(kwargs['done']):
+                self._stats['rews'].append(self._rews[i])
+                self._rews[i] = 0.0
+                self._stats['lens'].append(self._lens[i])
+                self._lens[i] = 0.0
 
-import torch
+        # Log other stuff
+        if 'info' in kwargs:
+            if not np.any(kwargs['done']):
+                return Batch()
 
+            done_kwargs = kwargs['info'][kwargs['done']]
+            for k, v in self._stats.items():
+                if k in ['rews', 'lens']:
+                    continue
+                num_hits = np.sum(done_kwargs[k])
+                v.extend([1.0] * num_hits)
+                for i, j in self._stats.items():
+                    if k == i: continue
+                    j.extend([0.0] * num_hits)
 
-def evaluate_agent(env, policy, model_path, on_test_set, n_episodes=100):
-    global eps_rew, first_run, arrived_at_goal, collision, off_route, time_step, resets, results
-    checkpoint = torch.load(model_path, map_location="cpu")
-    policy.load_state_dict(checkpoint)
-    policy.eval()
-    collector = Collector(policy, env, preprocess_fn=preprocess_fn)
-    result = collector.collect(n_episode=n_episodes)
-    rews, lens = result["rews"], result["lens"]
-    print(f"Final reward: {rews.mean()}, length: {lens.mean()}")
-    file_name = "test_results" if on_test_set else "train_results"
-    with open(file_name, "a") as f:
-        f.writelines(results)
+        if (self._log_interval and self._step - self._step_last_log >= self._log_interval) or len(self._stats['reached_goal']) == self._num_episodes:
+            self._step_last_log = self._step
+            summary = {
+                "timeout": np.mean(self._stats['timeout']),
+                "timeout_standing_still": np.mean(self._stats['timeout_standing_still']),
+                "goal": np.mean(self._stats['reached_goal']),
+                "collision": np.mean(self._stats['collision']),
+                "off_route": np.mean(self._stats['off_route']),
+            }
 
-    eps_rew = 0.0
-    results = []
-    arrived_at_goal = False
-    collision = False
-    off_route = False
-    time_step = 0
-    first_run = True
-    resets = 0
+            if self._log_path:
+                import yaml
+                summary_add = {
+                    "num_samples": len(self._stats['rews']),
+                    "reward": np.mean(self._stats['rews']),
+                    "reward_std": np.std(self._stats['rews']),
+                    "len": np.mean(self._stats['lens']),
+                    "len_std": np.std(self._stats['lens'])
+                }
+                summary.update(summary_add)
+                self.log_to_file(summary)
+            else:
+                self.log_to_tensorboard(summary)
+
+            if self._empty_after_log:
+                for k, v in self._stats.items():
+                    self._stats[k] = deque(maxlen=self._buffer_size)
+        return Batch()
+
+    def log_to_tensorboard(self, summary):
+        log_data = {}
+        for k, v in summary.items():
+            log_data[f"{self._prefix}/{k}"] = v
+        self._logger.write(f"{self._prefix}/env_step", self._step if not hasattr(self, '_step_overwrite') else self._step_overwrite, log_data)
+
+    def log_to_file(self, summary):
+        import yaml, os
+        for k, v in summary.items():
+            summary[k] = float(v)
+
+        with open(self._log_path, 'w') as f:
+            yaml.dump(summary, f, default_flow_style=False)
 
 
 def make_envs(
-    env_name,
-    train_config,
-    test_config,
-    training_num,
-    test_num,
-    evaluate=False,
-    on_test_set=False,
+        env_name,
+        train_config,
+        test_config,
+        training_num,
+        test_num,
 ):
-    if on_test_set:
-        env = gym.make(env_name, config=test_config)
-    else:
-        env = gym.make(env_name, config=train_config)
-    if evaluate:
-        return env, None, None
+    train_envs, test_envs = None, None
+    env = gym.make(env_name, config=train_config)
 
-    train_envs = ShmemVectorEnv(
-        [lambda: gym.make(env_name, config=train_config) for _ in range(training_num)]
-    )
-    test_envs = None
+    if training_num:
+        train_envs = ShmemVectorEnv(
+            [lambda: gym.make(env_name, config=train_config) for _ in range(training_num)]
+        )
     if test_num:
         test_envs = ShmemVectorEnv(
-            # Let's not get crazy. We limit the test environments to a maximum of 8.
             [
                 lambda: gym.make(env_name, config=test_config)
                 for _ in range(min(test_num, 8))
             ]
         )
     return env, train_envs, test_envs
+
+
+def make_collectors(**kwargs):
+    import os
+    train_collector, train_stats = None, None
+    if kwargs['train_envs']:
+        train_stats = StatsLogger(True, kwargs['logger'])
+        train_collector = Collector(
+            kwargs['policy'], kwargs['train_envs'], VectorReplayBuffer(kwargs['args'].buffer_size, len(kwargs['train_envs'])), preprocess_fn=train_stats.preprocess_fn
+        )
+    test_collector, test_stats = None, None
+    if kwargs['test_envs']:
+        test_stats = StatsLogger(False, kwargs['logger'], log_interval=None, num_episodes=kwargs['args'].test_num, buffer_size=kwargs['args'].test_num,
+                                 log_path=os.path.join(kwargs['log_path'], kwargs['eval_file']) if kwargs['eval'] else None)
+        test_collector = Collector(kwargs['policy'], kwargs['test_envs'], preprocess_fn=test_stats.preprocess_fn)
+
+    return train_collector, test_collector, train_stats, test_stats
