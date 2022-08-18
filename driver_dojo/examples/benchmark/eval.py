@@ -68,10 +68,10 @@ def eval_recursive(args, base_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate')
     parser.add_argument('output_path')
-    parser.add_argument('--num', default=1)
+    parser.add_argument('--num', default=1, type=int)
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--recursive', action='store_true')
-    parser.add_argument('--pattern', default='*')
+    parser.add_argument('--pattern', default='*', type=str)
     args = parser.parse_args()
 
     if args.recursive:
