@@ -47,6 +47,7 @@ def eval_recursive(args, base_path):
             todo.remove(idx)
             continue
 
+        print(output_path)
         with open(lock_file, 'w') as f:
             f.write('Yo, waddup')
 
