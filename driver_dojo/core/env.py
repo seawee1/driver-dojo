@@ -1,6 +1,7 @@
 import os
 from os.path import join as pjoin
 import gym
+import sumolib.geomhelper
 import traci
 import logging
 import logging.config
@@ -793,7 +794,7 @@ class DriverDojoEnv(gym.Env):
         ego_collided = collision_detection.check_collision()
 
         # Off-route
-        if runtime_vars.config.actions.space == ActionSpace.Semantic:
+        if runtime_vars.config.actions.space == ActionSpace.Semantic and not at_goal:
             # Check if we're out of waypoints
             off_route = len(runtime_vars.vehicle.waypoints) <= 1
         else:
@@ -806,6 +807,15 @@ class DriverDojoEnv(gym.Env):
             off_route = runtime_vars.vehicle.laneIndex == -1073741824
 
             if distance_to_lane > 5.0:
+                off_route = True
+
+
+            route_idx = runtime_vars.traci.vehicle.getRouteIndex(runtime_vars.config.simulation.egoID)
+            route_edgeID = runtime_vars.traci.vehicle.getRoute(runtime_vars.config.simulation.egoID)[route_idx]
+            edgePoly = runtime_vars.net.getEdge(route_edgeID).getShape()
+            route_dist = sumolib.geomhelper.distancePointToPolygon(runtime_vars.vehicle.position, edgePoly)
+
+            if route_dist > 20.0:
                 off_route = True
 
         # Check if driving in circles
