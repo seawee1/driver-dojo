@@ -36,9 +36,7 @@ class StatsLogger:
         # if obs_next/rew/done/info/env_id exist -> normal step
         n_envs = len(kwargs['env_id'])
         self._step += n_envs
-        print(kwargs)
         if self._rews is None:
-            print(n_envs)
             self._rews = np.zeros(n_envs)
             self._lens = np.zeros(n_envs)
             # self._rews = {env_id: 0.0 for env_id in kwargs['env_id']}
