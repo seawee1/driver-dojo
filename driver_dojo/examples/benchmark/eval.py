@@ -3,7 +3,7 @@ import hydra
 import sys
 import argparse
 from omegaconf import OmegaConf, open_dict
-from benchmark import benchmark
+from driver_dojo.examples.benchmark.benchmark import benchmark
 from hydra.core.hydra_config import HydraConfig
 from glob import glob
 from pathlib import Path
