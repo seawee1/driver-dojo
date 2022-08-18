@@ -200,8 +200,15 @@ class SUMOEngine:
         sys.stdout.flush()
 
     def simulationStep(self):
-        # Add whatever you want to do before/after simulationStep
-        runtime_vars.traci.simulationStep()
+        try:
+            # Add whatever you want to do before/after simulationStep
+            runtime_vars.traci.simulationStep()
+        except traci.FatalTraCIError as e:
+            logging.error(e.message)
+            self.close_engine()
+            return True
+
+
         if runtime_vars.config.simulation.co_sim_to_carla:
             spawned_actors = set(runtime_vars.traci.simulation.getDepartedIDList())
             destroyed_actors = set(runtime_vars.traci.simulation.getArrivedIDList())
@@ -246,6 +253,7 @@ class SUMOEngine:
 
                 self.carla_simulation.synchronize_vehicle(carla_actor_id, carla_transform, carla_lights)
             self.carla_simulation.tick()
+        return False
 
     @staticmethod
     def get_actor(actor_id):

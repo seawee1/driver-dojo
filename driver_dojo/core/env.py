@@ -1,4 +1,5 @@
 import os
+
 from os.path import join as pjoin
 import gym
 import sumolib.geomhelper
@@ -37,7 +38,9 @@ import driver_dojo.common.runtime_vars as runtime_vars
 from driver_dojo.core import SUMOEngine
 from driver_dojo.core.config import *
 from driver_dojo.core.types import ActionSpace
-#from driver_dojo.render.renderer import Renderer
+
+
+# from driver_dojo.render.renderer import Renderer
 
 
 def _init_sumo_paths():
@@ -218,7 +221,7 @@ class DriverDojoEnv(gym.Env):
         runtime_vars.vehicle = self._create_vehicle()
 
         # The renderer TODO
-        #self.renderer = Renderer()
+        # self.renderer = Renderer()
 
         # Initialize observation_space and action_space
         # TODO: remove @property decorators. They're a little to artsy here.
@@ -254,7 +257,6 @@ class DriverDojoEnv(gym.Env):
         logging.info("==============================================")
 
     def reset(self, seed=None):
-        # TODO
         # self.renderer.reset()
 
         # Re-init SUMO engine
@@ -267,7 +269,7 @@ class DriverDojoEnv(gym.Env):
         runtime_vars.scenario_generator.join()
         runtime_vars.sumo_engine.init_engine()
 
-        runtime_vars.sumo_engine.simulationStep()
+        if runtime_vars.sumo_engine.simulationStep(): return self.reset()
 
         # Initialize traffic (if desired -> else: Use provided rou.xml files)
         if runtime_vars.config.simulation.init_traffic:
@@ -277,7 +279,7 @@ class DriverDojoEnv(gym.Env):
             self._init_ego()
 
         # Do initial simulation step
-        runtime_vars.sumo_engine.simulationStep()
+        if runtime_vars.sumo_engine.simulationStep(): return self.reset()
         runtime_vars.scenario_generator.step()
 
         # Rebuild lane graph for routing and sub-goaling
@@ -309,7 +311,7 @@ class DriverDojoEnv(gym.Env):
             if runtime_vars.config.variation.traffic_routing:
                 self._insert_traffic()
 
-            runtime_vars.sumo_engine.simulationStep()
+            if runtime_vars.sumo_engine.simulationStep(): return self.reset()
             runtime_vars.vehicle.reset()
             runtime_vars.traffic_manager.step()
 
@@ -328,9 +330,25 @@ class DriverDojoEnv(gym.Env):
         obs = self._observer.step()
         return obs
 
+    def _dummy_return(self):
+        obs = np.zeros(self.action_space.shape, dtype=np.float32)
+        rew = 0.0
+        done = True
+        info = dict(
+            cost=0,  # Many safety-related methods need this
+            level_seed=runtime_vars.level_seed,  # Methods like PLR make use of this
+            time_step=runtime_vars.time_step,
+            reached_goal=False,
+            collision=False,  # For stats
+            timeout=False,
+            timeout_standing_still=False,
+            off_route=False,
+        )
+        return obs, rew, done, info
+
     def step(self, action):
         # TODO
-        #self.renderer.step()
+        # self.renderer.step()
 
         self.stepped = True
         self._last_sub_goals = runtime_vars.vehicle.sub_goals
@@ -598,7 +616,7 @@ class DriverDojoEnv(gym.Env):
     def _action_loop(self, action):
         for i in range(runtime_vars.config["simulation"]["steps_per_action"]):
             self._actions.step(action)
-            runtime_vars.sumo_engine.simulationStep()
+            if runtime_vars.sumo_engine.simulationStep(): return self._dummy_return()
             runtime_vars.traffic_manager.step()
             self.time_step += 1
             runtime_vars.time_step = self.time_step
@@ -809,7 +827,6 @@ class DriverDojoEnv(gym.Env):
             if distance_to_lane > 5.0:
                 off_route = True
 
-
             route_idx = runtime_vars.traci.vehicle.getRouteIndex(runtime_vars.config.simulation.egoID)
             route_edgeID = runtime_vars.traci.vehicle.getRoute(runtime_vars.config.simulation.egoID)[route_idx]
             edgePoly = runtime_vars.net.getEdge(route_edgeID).getShape()
@@ -892,9 +909,9 @@ class DriverDojoEnv(gym.Env):
                 import ffmpeg
                 (
                     ffmpeg
-                        .input(f"{last_path}/*.png", pattern_type='glob', framerate=round(1.0/runtime_vars.config.simulation.dt))
-                        .output(f'{last_path}/video.mp4')
-                        .run()
+                    .input(f"{last_path}/*.png", pattern_type='glob', framerate=round(1.0 / runtime_vars.config.simulation.dt))
+                    .output(f'{last_path}/video.mp4')
+                    .run()
                 )
 
         runtime_vars.traci.gui.screenshot(traci.gui.DEFAULT_VIEW, f"{pjoin(cur_path, str(runtime_vars.time_step))}.png")
