@@ -63,6 +63,9 @@ def eval_recursive(args, base_path):
 
         print(f'Eval finished, {len(todo)} models to go...')
 
+    if args.infinite:
+        eval_recursive(args, base_path)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate')
@@ -70,6 +73,7 @@ if __name__ == '__main__':
     parser.add_argument('--num', default=1, type=int)
     parser.add_argument('--train', action='store_true')
     parser.add_argument('--recursive', action='store_true')
+    parser.add_argument('--infinite', action='store_true')
     parser.add_argument('--pattern', default='*', type=str)
     args = parser.parse_args()
 
