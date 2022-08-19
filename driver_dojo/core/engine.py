@@ -117,7 +117,10 @@ class SUMOEngine:
             logging.info(f"Calling 'sumo {args_str}'")
 
             # Start a SUMO process
-            traci.start([sumoBinary] + sumoCmd)#, label=runtime_vars.sumo_label)
+            if os.getenv('LIBSUMO_AS_TRACI'):
+                traci.simulation.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
+            else:
+                traci.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
             runtime_vars.traci = traci
             #runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
 
