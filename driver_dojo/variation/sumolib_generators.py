@@ -105,7 +105,6 @@ def build(net, netName="net.net.xml"):
     subprocess.call(
         [
             netconvert,
-            "-v",
             "-n",
             nodesFile.name,
             "-e",

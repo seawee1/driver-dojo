@@ -13,7 +13,6 @@ from sumolib import checkBinary
 
 import driver_dojo.common.runtime_vars as runtime_vars
 
-from driver_dojo.carla_integration.bridge_helper import BridgeHelper
 
 
 class SUMOEngine:
@@ -118,8 +117,10 @@ class SUMOEngine:
             logging.info(f"Calling 'sumo {args_str}'")
 
             # Start a SUMO process
-            traci.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
-            runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
+            traci.start([sumoBinary] + sumoCmd)#, label=runtime_vars.sumo_label)
+            runtime_vars.traci = traci
+            #runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
+
             self.running = True
             logging.info(
                 f"Initialized SUMO instance with label {runtime_vars.sumo_label}..."
@@ -130,6 +131,7 @@ class SUMOEngine:
 
 
         if runtime_vars.config.simulation.co_sim_to_carla:
+            from driver_dojo.carla_integration.bridge_helper import BridgeHelper
             if self.carla_simulation is None:
                 # Start a Carla server
                 carla_executable = runtime_vars.config.simulation.carla_path
@@ -190,7 +192,7 @@ class SUMOEngine:
         # Closes the simulator
         if self.running:
             runtime_vars.traci.close()
-            traci.switch(runtime_vars.sumo_label)
+            #traci.switch(runtime_vars.sumo_label)
             traci.close()
             runtime_vars.traci = None
             self.running = False
