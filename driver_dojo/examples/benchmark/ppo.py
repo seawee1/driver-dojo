@@ -145,7 +145,15 @@ def train_ppo(
 
     if eval:
         policy.load_state_dict(torch.load(os.path.join(log_path, 'policy.pth')), strict=False)
-        test_collector.collect(n_episode=test_num)
+        result = test_collector.collect(n_episode=test_num)
+        summary = {
+            "n/ep": result["n/ep"],
+            "rew": result['rew'],
+            "len": result['len'],
+            "rew_std": result['rew_std'],
+            "len_std": result['len_std'],
+        }
+        test_stats.log_to_file(summary)
         env.close()
         test_envs.close()
         train_envs.close() if train_envs else None

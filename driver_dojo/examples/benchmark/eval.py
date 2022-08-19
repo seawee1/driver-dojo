@@ -40,11 +40,9 @@ def eval_recursive(args, base_path):
         idx = random.choice(todo)
         output_path = output_paths[idx]
 
-        eval_file = 'train_results.yaml' if args.train else 'test_results.yaml'
+        #eval_file = 'train_results.yaml' if args.train else 'test_results.yaml'
         lock_file = os.path.join(output_path, '.eval_lock')
-        if os.path.isfile(os.path.join(output_path, 'output', eval_file)) \
-                or os.path.isfile(lock_file):
-            todo.remove(idx)
+        if os.path.isfile(lock_file): #os.path.isfile(os.path.join(output_path, 'output', eval_file)) \
             continue
 
         print(output_path)

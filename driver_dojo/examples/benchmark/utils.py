@@ -34,23 +34,23 @@ class StatsLogger:
         # modify info before adding into the buffer, and recorded into tfb
         # if obs && env_id exist -> reset
         # if obs_next/rew/done/info/env_id exist -> normal step
-        n_envs = len(kwargs['env_id'])
-        self._step += n_envs
-        if self._rews is None:
-            self._rews = np.zeros(n_envs)
-            self._lens = np.zeros(n_envs)
-            # self._rews = {env_id: 0.0 for env_id in kwargs['env_id']}
-            # self._lens = {env_id: 0.0 for env_id in kwargs['env_id']}
-
-        # Log reward and eps len
-        if 'obs_next' in kwargs:
-            self._rews[kwargs['env_id']] += kwargs['rew']
-            self._lens[kwargs['env_id']] += 1.0
-            for i in np.argwhere(kwargs['done']):
-                self._stats['rews'].append(self._rews[i])
-                self._rews[i] = 0.0
-                self._stats['lens'].append(self._lens[i])
-                self._lens[i] = 0.0
+        # n_envs = len(kwargs['env_id'])
+        # self._step += n_envs
+        # if self._rews is None:
+        #     self._rews = np.zeros(n_envs)
+        #     self._lens = np.zeros(n_envs)
+        #     # self._rews = {env_id: 0.0 for env_id in kwargs['env_id']}
+        #     # self._lens = {env_id: 0.0 for env_id in kwargs['env_id']}
+        #
+        # # Log reward and eps len
+        # if 'obs_next' in kwargs:
+        #     self._rews[kwargs['env_id']] += kwargs['rew']
+        #     self._lens[kwargs['env_id']] += 1.0
+        #     for i in np.argwhere(kwargs['done']):
+        #         self._stats['rews'].append(self._rews[i])
+        #         self._rews[i] = 0.0
+        #         self._stats['lens'].append(self._lens[i])
+        #         self._lens[i] = 0.0
 
         # Log other stuff
         if 'info' in kwargs:
@@ -78,15 +78,15 @@ class StatsLogger:
             }
 
             if self._log_path:
-                import yaml
-                summary_add = {
-                    "num_samples": len(self._stats['rews']),
-                    "reward": np.mean(self._stats['rews']),
-                    "reward_std": np.std(self._stats['rews']),
-                    "len": np.mean(self._stats['lens']),
-                    "len_std": np.std(self._stats['lens'])
-                }
-                summary.update(summary_add)
+                # import yaml
+                # summary_add = {
+                #     "num_samples": len(self._stats['rews']),
+                # #     "reward": np.mean(self._stats['rews']),
+                # #     "reward_std": np.std(self._stats['rews']),
+                # #     "len": np.mean(self._stats['lens']),
+                # #     "len_std": np.std(self._stats['lens'])
+                # }
+                # summary.update(summary_add)
                 self.log_to_file(summary)
             else:
                 self.log_to_tensorboard(summary)
@@ -105,7 +105,17 @@ class StatsLogger:
     def log_to_file(self, summary):
         import yaml, os
         for k, v in summary.items():
-            summary[k] = float(v)
+            summary[k] = [float(v)]
+
+        if os.path.isfile(self._log_path):
+            with open(self._log_path, 'r') as f:
+                summary_old = yaml.safe_load(f)
+
+                for k, v in summary_old.items():
+                    if k in summary:
+                        summary[k] = v + summary[k]
+                    else:
+                        summary[k] = v
 
         with open(self._log_path, 'w') as f:
             yaml.dump(summary, f, default_flow_style=False)
