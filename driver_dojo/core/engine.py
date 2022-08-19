@@ -20,6 +20,8 @@ class SUMOEngine:
         self.running = False
         self.carla_simulation = None
         self.carla_actors = {}
+        self.carla_sensors = []
+        self.carla_process = None
         self.additional_paths = ""
 
     def init_engine(self):
@@ -135,35 +137,67 @@ class SUMOEngine:
 
         if runtime_vars.config.simulation.co_sim_to_carla:
             from driver_dojo.carla_integration.bridge_helper import BridgeHelper
+            import carla
             if self.carla_simulation is None:
+                import random
+                import psutil
+                def is_used(port):
+                    """Checks whether or not a port is used"""
+                    return port in [conn.laddr.port for conn in psutil.net_connections()]
+
+                server_port = random.randint(15000, 32000)
+                while is_used(server_port) or is_used(server_port+1): server_port += 2
+
                 # Start a Carla server
                 carla_executable = runtime_vars.config.simulation.carla_path
-                carla_start_cmd = [
-                    carla_executable,
-                    '-carla-rpc-port=3000',
-                    #'-carla-server',
-                    #-benchmark -fps=<framerate>'
+                if runtime_vars.config.simulation.render:
+                    carla_start_cmd = [
+                        carla_executable,
+                        "-windowed",
+                        "-ResX={}".format(600),
+                        "-ResY={}".format(600),
+                    ]
+                else:
+                    carla_start_cmd = [
+                        carla_executable,
+                        '-RenderOffScreen',
+                    ]
+
+                carla_start_cmd += [
+                    f"--carla-rpc-port={server_port}",
+                    "-quality-level=Low"
                 ]
-                p = subprocess.Popen(
-                   carla_start_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-                )
+
+                if os.name != "nt":
+                    self.carla_process = subprocess.Popen(
+                        carla_start_cmd,
+                        shell=True,
+                        preexec_fn=os.setsid,
+                        stdout=open(os.devnull, "w"),
+                    )
+                else:
+                    self.carla_process = subprocess.Popen(
+                        carla_start_cmd,
+                        shell=True,
+                    )
+
                 import time
                 time.sleep(10)
 
                 # Create the CarlaSimulation object
                 from driver_dojo.carla_integration.carla_simulation import CarlaSimulation
-                self.carla_simulation = CarlaSimulation('127.0.0.1', 3000, 0.2)
-
+                self.carla_simulation = CarlaSimulation('127.0.0.1', server_port, runtime_vars.config.simulation.dt)
 
                 BridgeHelper.blueprint_library = self.carla_simulation.world.get_blueprint_library()
 
-                # Configuring carla simulation in sync mode.
-                settings = self.carla_simulation.world.get_settings()
-                settings.synchronous_mode = True
-                settings.fixed_delta_seconds = runtime_vars.config.simulation.dt
-                self.carla_simulation.world.apply_settings(settings)
+            for x in self.carla_sensors:
+                x.destroy()
+            for k, v in self.carla_actors.items():
+                self.carla_simulation.destroy_actor(v)
+            if self.carla_simulation: self.carla_simulation.tick()
 
             self.carla_actors = {}
+            self.carla_sensors = []
             # We have to grab this again and again
             BridgeHelper.offset = runtime_vars.net.getLocationOffset()
             # Load map
@@ -178,16 +212,22 @@ class SUMOEngine:
                 vertex_distance = 2.0  # in meters
                 max_road_length = 500.0 # in meters
                 wall_height = 0.0      # in meters
-                extra_width = 0.0      # in meters
-                import carla
+                extra_width = 1.0      # in meters
                 world = self.carla_simulation.client.generate_opendrive_world(
                     data, carla.OpendriveGenerationParameters(
                         vertex_distance=vertex_distance,
                         max_road_length=max_road_length,
                         wall_height=wall_height,
                         additional_width=extra_width,
-                        smooth_junctions=False,
+                        smooth_junctions=True,
                         enable_mesh_visibility=True))
+
+            # Configuring carla simulation in sync mode.
+            settings = self.carla_simulation.world.get_settings()
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = runtime_vars.config.simulation.dt
+            settings.substepping = False
+            self.carla_simulation.world.apply_settings(settings)
 
         return runtime_vars.traci
 
@@ -195,13 +235,29 @@ class SUMOEngine:
         # Closes the simulator
         if self.running:
             runtime_vars.traci.close()
-            #traci.switch(runtime_vars.sumo_label)
-            #traci.close()
             runtime_vars.traci = None
             self.running = False
             logging.info(
                 f"Closed SUMO instance with label {runtime_vars.sumo_label}..."
             )
+
+            if self.carla_process:
+                self.carla_simulation.close()
+
+                if os.name != "nt":
+                    os.killpg(os.getpgid(self.carla_process.pid), signal.SIGTERM)
+                else:
+                    import signal
+                    #os.kill(self.carla_process.pid, signal.CTRL_C_EVENT)
+                    #subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.carla_process.pid)])
+                    #signal.CTRL_BREAK_EVENT
+                    self.carla_process.terminate()
+                    self.carla_process.wait()
+
+                self.carla_simulation = None
+                self.carla_process = None
+                self.carla_actors = {}
+
         sys.stdout.flush()
 
     def simulationStep(self):
@@ -215,6 +271,8 @@ class SUMOEngine:
 
 
         if runtime_vars.config.simulation.co_sim_to_carla:
+            from driver_dojo.carla_integration.bridge_helper import BridgeHelper
+            import carla
             spawned_actors = set(runtime_vars.traci.simulation.getDepartedIDList())
             destroyed_actors = set(runtime_vars.traci.simulation.getArrivedIDList())
 
@@ -222,8 +280,11 @@ class SUMOEngine:
             sumo_spawned_actors = spawned_actors - set(self.carla_actors.values())
             for sumo_actor_id in sumo_spawned_actors:
                 sumo_actor = self.get_actor(sumo_actor_id)
+                if sumo_actor_id == runtime_vars.config.simulation.egoID:
+                    carla_blueprint = self.carla_simulation.world.get_blueprint_library().find("vehicle.audi.a2")
+                else:
+                    carla_blueprint = BridgeHelper.get_carla_blueprint(sumo_actor, False)
 
-                carla_blueprint = BridgeHelper.get_carla_blueprint(sumo_actor, True)
                 if carla_blueprint is not None:
                     carla_transform = BridgeHelper.get_carla_transform(sumo_actor.transform,
                                                                        sumo_actor.extent)
@@ -232,15 +293,48 @@ class SUMOEngine:
                     from driver_dojo.carla_integration.constants import INVALID_ACTOR_ID  # pylint: disable=wrong-import-position
                     if carla_actor_id != INVALID_ACTOR_ID:
                         self.carla_actors[sumo_actor_id] = carla_actor_id
+                        carla_actor = self.carla_simulation.get_actor(carla_actor_id)
                 else:
                     print("No blueprint")
+                    continue
+
+                if runtime_vars.config.simulation.egoID == sumo_actor_id and runtime_vars.observer is not None:
+                    from driver_dojo.core.types import CarlaSensor, Observer
+                    from driver_dojo.observer.carla_observer import CarlaCameraObserver
+                    for carla_sensor_type in runtime_vars.config.observations.carla_sensors:
+                        if carla_sensor_type == CarlaSensor.RGBCamera:
+                            bp_name = 'sensor.camera.rgb'
+                        elif carla_sensor_type == CarlaSensor.DepthCamera:
+                            bp_name = 'sensor.camera.depth'
+                        else:
+                            raise NotImplementedError
+
+                        camera_bp = self.carla_simulation.world.get_blueprint_library().find(bp_name)
+                        # Modify the attributes of the blueprint to set image resolution and field of view.
+                        camera_bp.set_attribute('image_size_x', '84')
+                        camera_bp.set_attribute('image_size_y', '84')
+                        camera_bp.set_attribute('fov', '110')
+                        camera_bp.set_attribute('sensor_tick', '0.0')
+                        carla_actor = self.carla_simulation.get_actor(self.carla_actors[runtime_vars.config.simulation.egoID])
+                        camera = self.carla_simulation.world.spawn_actor(
+                            camera_bp,
+                            carla.Transform(carla.Location(x=1.6, z=1.7)),
+                            attach_to=carla_actor,
+                            attachment_type=carla.AttachmentType.Rigid
+                        )
+                        observer = [x for x in runtime_vars.observer.observation_members['image'] if isinstance(x,CarlaCameraObserver)][0]
+                        camera.listen(observer.listen_rgb)
+                        self.carla_sensors.append(camera)
+                        print("New camera")
+
+
+
+
 
             # Destroy old
             for sumo_actor_id in destroyed_actors:
                 if sumo_actor_id in self.carla_actors:
                     self.carla_simulation.destroy_actor(self.carla_actors.pop(sumo_actor_id))
-
-            # Update current
 
             # Updating sumo actors in carla.
             for sumo_actor_id in self.carla_actors:
@@ -251,13 +345,35 @@ class SUMOEngine:
 
                 carla_transform = BridgeHelper.get_carla_transform(sumo_actor.transform,
                                                                    sumo_actor.extent)
-                #if self.sync_vehicle_lights:
+
                 carla_lights = BridgeHelper.get_carla_lights_state(carla_actor.get_light_state(), sumo_actor.signals)
-                #else:
-                #    carla_lights = None
 
                 self.carla_simulation.synchronize_vehicle(carla_actor_id, carla_transform, carla_lights)
+
+
+            #camera_bp = blueprint_library.find('sensor.camera.rgb')
+            #camera = world.spawn_actor(camera_bp, relative_transform, attach_to=my_vehicle)
+            #camera.listen(lambda image: image.save_to_disk('output/%06d.png' % image.frame))
+
+
+            # Update spectator cam
+            # if runtime_vars.config.simulation.egoID in self.carla_actors:
+            #     spectator = self.carla_simulation.world.get_spectator()
+            #     ego_actor_carla = self.carla_simulation.world.get_actors().find(self.carla_actors[runtime_vars.config.simulation.egoID])
+            #     ego_transform = ego_actor_carla.get_transform()
+            #     spectator_transform = carla.Transform(
+            #         carla.Location(
+            #             ego_transform.location.x - 5 * ego_transform.get_forward_vector().x,
+            #             ego_transform.location.y - 5 * ego_transform.get_forward_vector().y,
+            #             ego_transform.location.z + 3
+            #         ),
+            #         ego_transform.rotation,
+            #     )
+            #     spectator.set_transform(spectator_transform)
+
+
             self.carla_simulation.tick()
+
         return False
 
     @staticmethod

@@ -7,3 +7,4 @@ from .available_options_observer import AvailableOptionsObserver
 from .multi_observer import MultiObserver
 from .sub_goal_observer import SubGoalObserver
 from .road_shape_observer import RoadShapeObserver
+from .carla_observer import CarlaCameraObserver

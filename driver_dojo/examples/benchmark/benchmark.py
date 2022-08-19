@@ -8,8 +8,19 @@ from driver_dojo.examples.benchmark.fqf import train_fqf
 from driver_dojo.examples.benchmark.sac import train_sac
 
 
+def kill_all_servers():
+    import psutil
+    import signal
+    """Kill all PIDs that start with Carla"""
+    processes = [p for p in psutil.process_iter() if "carla" in p.name().lower()]
+    for process in processes:
+        os.kill(process.pid, signal.SIGTERM)#, signal.SIGKILL)
+
+
 @hydra.main(version_base=None, config_path="experiments", config_name="config")
 def benchmark(config: DictConfig) -> None:
+    kill_all_servers()
+
     logging.info(os.getcwd())
     logging.info(OmegaConf.to_yaml(config))
 
@@ -23,7 +34,7 @@ def benchmark(config: DictConfig) -> None:
     if "obs" in config:
         obs_config = config.obs
 
-    env_config_base = dict(observations={}, actions={}, vehicle={}, simulation={},)
+    env_config_base = dict(observations={}, actions={}, vehicle={}, simulation={}, )
     from copy import deepcopy
 
     train_config = deepcopy(env_config_base)

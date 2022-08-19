@@ -58,6 +58,10 @@ class MultiObserver:
                 axis=2,
             )
 
+            if runtime_vars.config.observations.cwh:
+                low = np.rollaxis(low, 2)
+                high = np.rollaxis(high, 2)
+
             self.observation_spaces["image"] = create_observation_space(
                 low, high, runtime_vars.config["observations"]["feature_scaling"]
             )
@@ -102,9 +106,9 @@ class MultiObserver:
             return frames
 
         def observe_image(obs, frames):
-            shift = obs.shape[2]
-            frames = np.roll(frames, shift, axis=2)
-            frames[:, :, :shift] = obs
+            shift = obs.shape[0]
+            frames = np.roll(frames, shift, axis=0)
+            frames[:shift, :, :] = obs
             return frames
 
         if self.multi_observer_type == "vector":
@@ -112,26 +116,18 @@ class MultiObserver:
         elif self.multi_observer_type == "image":
             self.frames = observe_image(self._observe(), self.frames)
         else:
-            obs = self.observe()
+            obs = self._observe()
             self.frames["vector"] = observe_vector(obs["vector"], self.frames["vector"])
             self.frames["image"] = observe_image(obs["image"], self.frames["image"])
 
-        # CHW transform
-        # TODO
-        img = self.frames
-        if (
-            runtime_vars.config["observations"]["cwh"]
-            and not self.observation_spaces["vector"]
-        ):
-            img = np.rollaxis(self.frames, 2)
-
-        return img
+        return self.frames
 
     def _observe(self):
         if self.observation_spaces["image"] is None:
             obs = np.concatenate(
                 [observer.observe() for observer in self.observation_members["vector"]]
             )
+            if runtime_vars.config.observations.cwh: obs = np.rollaxis(obs, 2)
         elif self.observation_spaces["vector"] is None:
             obs = np.concatenate(
                 [observer.observe() for observer in self.observation_members["image"]],
@@ -153,9 +149,9 @@ class MultiObserver:
                     2,
                 ),
             }
+            if runtime_vars.config.observations.cwh: obs['image'] = np.rollaxis(obs['image'], 2)
         return obs
 
     @property
     def space(self):
-
         return self.observation_space

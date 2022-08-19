@@ -12,6 +12,7 @@ from driver_dojo.core.types import (
     FeatureScaling,
     Observer,
     ActionSpace,
+    CarlaSensor
 )
 
 
@@ -61,7 +62,7 @@ class SimulationConfig:
         str
     ] = None  # Will copy every map (.net.xml and .xodr file) to the folder specified by 'store_for_plotting'
     time_to_teleport: Optional[float] = -1
-    co_sim_to_carla: bool = False
+    co_sim_to_carla: bool = True
     carla_path: str = "C:\\Users\\seegras\\Portables\\CARLA_0.9.13\\WindowsNoEditor\\CarlaUE4.exe"
 
 
@@ -153,7 +154,6 @@ class ObservationConfig:
             Observer.RadiusVehicle,
             Observer.SubGoals,
             Observer.RoadShape,
-            # Observer.BirdsEye,
         ]
     )
     feature_scaling: FeatureScaling = FeatureScaling.Standardize
@@ -178,6 +178,12 @@ class ObservationConfig:
     rs_opening_angle: int = 216  # Opening angle into vehicle heading direction
     rs_num_inter_per_ray: int = 3  # Return the n nearest intersection points per ray
     rs_ray_dist: float = 150.0  # Length of a ray-cast
+    carla_sensors: List[CarlaSensor] = field(
+        default_factory=lambda: [
+            CarlaSensor.RGBCamera,
+            #CarlaSensor.DepthCamera
+        ]
+    )
 
 
 @dataclass

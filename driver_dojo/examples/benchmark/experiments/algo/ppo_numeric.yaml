@@ -1,7 +1,7 @@
 name: "ppo"
 params:
     visual: False
-    buffer_size: 100000
+    buffer_size: 2048 #100000
     lr: 0.0003
     lr_decay: False
     gamma: 0.99

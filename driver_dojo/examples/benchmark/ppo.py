@@ -15,7 +15,7 @@ from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import ActorCritic, DataParallelNet, Net
 
 from driver_dojo.examples.benchmark.utils import make_envs, StatsLogger, make_collectors
-from driver_dojo.examples.benchmark.atari_network import DQN
+from driver_dojo.examples.benchmark.network import DQN, DictNet
 
 
 def train_ppo(
@@ -37,60 +37,98 @@ def train_ppo(
         test_num,
     )
 
-    # Probe the environment and close
-    state_shape = env.observation_space.shape or env.observation_space.n
-    action_shape = env.action_space.shape or env.action_space.n
 
     # Seed
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    # Create model
-    visual = False
-    if "visual" in args:
-        visual = args.visual
-    if visual and isinstance(env.action_space, gym.spaces.Discrete):
-        from tianshou.utils.net.discrete import Actor, Critic
+    action_shape = env.action_space.shape or env.action_space.n
 
-        # IMPORTANT: Set cwh to True inside env
-        net = DQN(
-            state_shape[0],
-            state_shape[1],
-            state_shape[2],
+    if isinstance(env.observation_space, gym.spaces.Dict):
+        shape_visual = env.observation_space['image'].shape
+        num_feat = 128
+        shape_vector = env.observation_space['vector'].shape
+        shape_concat = (shape_vector[0] + num_feat)
+
+        net_visual = DQN(
+            shape_visual[0],
+            shape_visual[1],
+            shape_visual[2],
             action_shape,
             device=args.device,
             features_only=True,
-            output_dim=args.hidden_sizes,
+            output_dim=num_feat
         )
-        actor = Actor(net, action_shape, device=args.device).to(args.device)
-        critic = Critic(net, device=args.device,).to(args.device)
-        actor_critic = ActorCritic(actor, critic)
+        net_a = DictNet(
+            net_visual,
+            num_feat,
+            shape_vector,
+            args.device
+        )
+        net_b = DictNet(
+            net_visual,
+            num_feat,
+            shape_vector,
+            args.device
+        )
     else:
-        if isinstance(env.action_space, gym.spaces.Box):
-            from tianshou.utils.net.continuous import ActorProb, Critic
+        # Probe the environment and close
+        state_shape = env.observation_space.shape or env.observation_space.n
+        net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
 
-            net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-            net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-            actor = ActorProb(
-                net_a, action_shape, max_action=args.max_action, device=args.device
-            ).to(args.device)
-            critic = Critic(net_b, device=args.device,).to(args.device)
-            actor_critic = ActorCritic(actor, critic)
+    if isinstance(env.action_space, gym.spaces.Box):
+        from tianshou.utils.net.continuous import ActorProb, Critic
 
-        else:
-            from tianshou.utils.net.discrete import Actor, Critic
+        #net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        #net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        actor = ActorProb(
+            net_a, action_shape, max_action=args.max_action, device=args.device
+        ).to(args.device)
+        critic = Critic(net_b, device=args.device).to(args.device)
+        actor_critic = ActorCritic(actor, critic)
 
-            net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-            net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-            if args.device == "cuda" and torch.cuda.is_available():
-                actor = DataParallelNet(
-                    Actor(net_a, action_shape, device=None).to(args.device)
-                )
-                critic = DataParallelNet(Critic(net_b, device=None).to(args.device))
-            else:
-                actor = Actor(net_a, action_shape, device=args.device).to(args.device)
-                critic = Critic(net_b, device=args.device).to(args.device)
-            actor_critic = ActorCritic(actor, critic)
+    else:
+        from tianshou.utils.net.discrete import Actor, Critic
+
+        #net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        #net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+        # if args.device == "cuda" and torch.cuda.is_available():
+        #     actor = DataParallelNet(
+        #         Actor(net_a, action_shape, device=None).to(args.device)
+        #     )
+        #     critic = DataParallelNet(Critic(net_b, device=None).to(args.device))
+        # else:
+        actor = Actor(net_a, action_shape, device=args.device).to(args.device)
+        critic = Critic(net_b, device=args.device).to(args.device)
+        actor_critic = ActorCritic(actor, critic)
+
+    # Create model
+    # if isinstance(env.action_space, gym.spaces.Box):
+    #     from tianshou.utils.net.continuous import ActorProb, Critic
+    #
+    #     net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    #     net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    #     actor = ActorProb(
+    #         net_a, action_shape, max_action=args.max_action, device=args.device
+    #     ).to(args.device)
+    #     critic = Critic(net_b, device=args.device,).to(args.device)
+    #     actor_critic = ActorCritic(actor, critic)
+    #
+    # else:
+    #     from tianshou.utils.net.discrete import Actor, Critic
+    #
+    #     net_a = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    #     net_b = Net(state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    #     if args.device == "cuda" and torch.cuda.is_available():
+    #         actor = DataParallelNet(
+    #             Actor(net_a, action_shape, device=None).to(args.device)
+    #         )
+    #         critic = DataParallelNet(Critic(net_b, device=None).to(args.device))
+    #     else:
+    #         actor = Actor(net_a, action_shape, device=args.device).to(args.device)
+    #         critic = Critic(net_b, device=args.device).to(args.device)
+    #     actor_critic = ActorCritic(actor, critic)
 
     # Optimizer
     optim = torch.optim.Adam(actor_critic.parameters(), lr=args.lr)

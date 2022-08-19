@@ -75,9 +75,15 @@ class Observer(Enum):
     Waypoints = "Waypoints"
     SubGoals = "SubGoals"
     RoadShape = "RoadShape"
+    CarlaCamera = "CarlaCamera"
 
 
 class ActionSpace(Enum):
     Continuous = "Continuous"
     Discretized = "Discretized"
     Semantic = "Semantic"
+
+
+class CarlaSensor(Enum):
+    RGBCamera = "RGBCamera"
+    DepthCamera = "DepthCamera"

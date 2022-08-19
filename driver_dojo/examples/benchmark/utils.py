@@ -122,7 +122,6 @@ class StatsLogger:
         with open(self._log_path, 'w') as f:
             yaml.dump(summary, f, default_flow_style=False)
 
-
 def make_envs(
         env_name,
         train_config,

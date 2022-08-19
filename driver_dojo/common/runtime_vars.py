@@ -13,6 +13,7 @@ temp_path = None
 sumocfg_path = None
 
 sumo_engine = None
+carla_simulator = None
 net = None
 net_bbox = None
 sumo_map = None
@@ -24,3 +25,4 @@ episode_count = None
 sumo_label = None
 scenario_generator = None
 route_edges = None
+observer = None

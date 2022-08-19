@@ -137,6 +137,13 @@ if __name__ == "__main__":
             render_track_ego=True,
             info=True,
         ),
+        observations=dict(
+            observers=[
+                "EgoVehicle",
+                "SubGoals",
+                "CarlaCamera"
+            ],
+        )
     )
 
     continuous_actions = False

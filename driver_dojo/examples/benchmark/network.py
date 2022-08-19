@@ -7,6 +7,33 @@ from torch import nn
 from tianshou.utils.net.discrete import NoisyLinear
 
 
+class DictNet(nn.Module):
+    def __init__(
+            self,
+            net_visual,
+            num_feat,
+            shape_vector,
+            device,
+    ):
+        super().__init__()
+        self.net_visual = net_visual
+        self.output_dim = (shape_vector[0] + num_feat)
+        self.device = device
+
+    def forward(
+            self,
+            obs: Dict[str, np.ndarray],
+            state: Optional[Any] = None,
+            info: Dict[str, Any] = {},
+    ) -> Tuple[torch.Tensor, Any]:
+        r"""Mapping: s -> Q(s, \*)."""
+        obs_vis = torch.as_tensor(obs['image'], device=self.device, dtype=torch.float32)
+        feat_vis, state = self.net_visual(obs_vis, state, info)
+        obs_vec = torch.as_tensor(obs['vector'], device=self.device, dtype=torch.float32)
+        feat_obs_concat = torch.cat((feat_vis, obs_vec), 1)
+        return feat_obs_concat, state
+
+
 class DQN(nn.Module):
     """Reference: Human-level control through deep reinforcement learning.
 
@@ -15,14 +42,14 @@ class DQN(nn.Module):
     """
 
     def __init__(
-        self,
-        c: int,
-        h: int,
-        w: int,
-        action_shape: Sequence[int],
-        device: Union[str, int, torch.device] = "cpu",
-        features_only: bool = False,
-        output_dim: Optional[int] = None,
+            self,
+            c: int,
+            h: int,
+            w: int,
+            action_shape: Sequence[int],
+            device: Union[str, int, torch.device] = "cpu",
+            features_only: bool = False,
+            output_dim: Optional[int] = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -52,10 +79,10 @@ class DQN(nn.Module):
             self.output_dim = output_dim
 
     def forward(
-        self,
-        obs: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Dict[str, Any] = {},
+            self,
+            obs: Union[np.ndarray, torch.Tensor],
+            state: Optional[Any] = None,
+            info: Dict[str, Any] = {},
     ) -> Tuple[torch.Tensor, Any]:
         r"""Mapping: s -> Q(s, \*)."""
         obs = torch.as_tensor(obs, device=self.device, dtype=torch.float32)
@@ -70,23 +97,23 @@ class C51(DQN):
     """
 
     def __init__(
-        self,
-        c: int,
-        h: int,
-        w: int,
-        action_shape: Sequence[int],
-        num_atoms: int = 51,
-        device: Union[str, int, torch.device] = "cpu",
+            self,
+            c: int,
+            h: int,
+            w: int,
+            action_shape: Sequence[int],
+            num_atoms: int = 51,
+            device: Union[str, int, torch.device] = "cpu",
     ) -> None:
         self.action_num = np.prod(action_shape)
         super().__init__(c, h, w, [self.action_num * num_atoms], device)
         self.num_atoms = num_atoms
 
     def forward(
-        self,
-        obs: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Dict[str, Any] = {},
+            self,
+            obs: Union[np.ndarray, torch.Tensor],
+            state: Optional[Any] = None,
+            info: Dict[str, Any] = {},
     ) -> Tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Z(x, \*)."""
         obs, state = super().forward(obs)
@@ -103,16 +130,16 @@ class Rainbow(DQN):
     """
 
     def __init__(
-        self,
-        c: int,
-        h: int,
-        w: int,
-        action_shape: Sequence[int],
-        num_atoms: int = 51,
-        noisy_std: float = 0.5,
-        device: Union[str, int, torch.device] = "cpu",
-        is_dueling: bool = True,
-        is_noisy: bool = True,
+            self,
+            c: int,
+            h: int,
+            w: int,
+            action_shape: Sequence[int],
+            num_atoms: int = 51,
+            noisy_std: float = 0.5,
+            device: Union[str, int, torch.device] = "cpu",
+            is_dueling: bool = True,
+            is_noisy: bool = True,
     ) -> None:
         super().__init__(c, h, w, action_shape, device, features_only=True)
         self.action_num = np.prod(action_shape)
@@ -139,10 +166,10 @@ class Rainbow(DQN):
         self.output_dim = self.action_num * self.num_atoms
 
     def forward(
-        self,
-        obs: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Dict[str, Any] = {},
+            self,
+            obs: Union[np.ndarray, torch.Tensor],
+            state: Optional[Any] = None,
+            info: Dict[str, Any] = {},
     ) -> Tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Z(x, \*)."""
         obs, state = super().forward(obs)
@@ -167,23 +194,23 @@ class QRDQN(DQN):
     """
 
     def __init__(
-        self,
-        c: int,
-        h: int,
-        w: int,
-        action_shape: Sequence[int],
-        num_quantiles: int = 200,
-        device: Union[str, int, torch.device] = "cpu",
+            self,
+            c: int,
+            h: int,
+            w: int,
+            action_shape: Sequence[int],
+            num_quantiles: int = 200,
+            device: Union[str, int, torch.device] = "cpu",
     ) -> None:
         self.action_num = np.prod(action_shape)
         super().__init__(c, h, w, [self.action_num * num_quantiles], device)
         self.num_quantiles = num_quantiles
 
     def forward(
-        self,
-        obs: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Dict[str, Any] = {},
+            self,
+            obs: Union[np.ndarray, torch.Tensor],
+            state: Optional[Any] = None,
+            info: Dict[str, Any] = {},
     ) -> Tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Z(x, \*)."""
         obs, state = super().forward(obs)

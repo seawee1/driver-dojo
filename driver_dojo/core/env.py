@@ -30,6 +30,7 @@ from driver_dojo.observer import (
     AvailableOptionsObserver,
     SubGoalObserver,
     RoadShapeObserver,
+    CarlaCameraObserver
 )
 from driver_dojo.common import TrafficManager
 from driver_dojo.variation import TrafficRandomizer
@@ -688,24 +689,14 @@ class DriverDojoEnv(gym.Env):
                 observers.append(AvailableOptionsObserver())
             elif obs_name == Observer.RoadShape:
                 observers.append(RoadShapeObserver())
+            elif obs_name == Observer.CarlaCamera:
+                observers.append(CarlaCameraObserver())
             else:
                 raise NotImplementedError
         self._observer = MultiObserver(*observers)
+        runtime_vars.observer = self._observer
         self._observation_space = self._observer.space
 
-        # Adjust observation space to cwh if needed
-        if (
-                runtime_vars.config.observations.cwh
-                and len(self._observation_space.shape) == 3
-        ):
-            import gym.spaces
-
-            shape = self._observation_space.shape
-            low = np.rollaxis(self._observation_space.low, 2)
-            high = np.rollaxis(self._observation_space.high, 2)
-            self._observation_space = gym.spaces.Box(low=low, high=high)
-
-        # TODO: into observers
         return self._observation_space
 
     @property
