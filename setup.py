@@ -30,6 +30,7 @@ setup(
             "torch",
             "torchvision",
             "torchaudio",
+            "tensorflow",
             "tensorboard",
             "pandas",
             "seaborn",

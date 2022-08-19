@@ -47,7 +47,7 @@ def eval(args, output_path):
         config.algo.params.test_num = args.num
         config.algo.params.training_num = None
         if args.rnd_seed:
-            config.env_test.seed = random.randint(13371337)
+            config.env_test.seed = random.randint(0, 13371337)
 
         benchmark(config)
 

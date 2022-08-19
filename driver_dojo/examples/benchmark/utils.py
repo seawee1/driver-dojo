@@ -112,6 +112,8 @@ class StatsLogger:
                 summary_old = yaml.safe_load(f)
 
                 for k, v in summary_old.items():
+                    if not isinstance(v, list): v = list(v)
+
                     if k in summary:
                         summary[k] = v + summary[k]
                     else:
