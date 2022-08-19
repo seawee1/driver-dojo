@@ -119,10 +119,10 @@ class SUMOEngine:
             # Start a SUMO process
             if os.getenv('LIBSUMO_AS_TRACI'):
                 traci.simulation.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
+                runtime_vars.traci = traci
             else:
                 traci.start([sumoBinary] + sumoCmd, label=runtime_vars.sumo_label)
-            runtime_vars.traci = traci
-            #runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
+                runtime_vars.traci = traci.getConnection(runtime_vars.sumo_label)
 
             self.running = True
             logging.info(
@@ -196,7 +196,7 @@ class SUMOEngine:
         if self.running:
             runtime_vars.traci.close()
             #traci.switch(runtime_vars.sumo_label)
-            traci.close()
+            #traci.close()
             runtime_vars.traci = None
             self.running = False
             logging.info(
