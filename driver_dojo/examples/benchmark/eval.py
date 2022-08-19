@@ -44,10 +44,10 @@ def eval(args, output_path):
         with open_dict(config) as config:
             config.eval = True
             config.eval_file = 'train_results.yaml' if args.train else 'test_results.yaml'
+            if args.rnd_seed and not args.train:
+                config.env_test.simulation.seed = random.randint(0, 13371337)
         config.algo.params.test_num = args.num
         config.algo.params.training_num = None
-        if args.rnd_seed:
-            config.env_test.seed = random.randint(0, 13371337)
 
         benchmark(config)
 
