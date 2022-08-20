@@ -122,22 +122,26 @@ class StatsLogger:
         with open(self._log_path, 'w') as f:
             yaml.dump(summary, f, default_flow_style=False)
 
+
+
 def make_envs(
         env_name,
         train_config,
         test_config,
         training_num,
         test_num,
+        prepare_server=True
 ):
     train_envs, test_envs = None, None
     env = gym.make(env_name, config=train_config)
 
+    from tianshou.env.venvs import SubprocVectorEnv
     if training_num:
-        train_envs = ShmemVectorEnv(
+        train_envs = SubprocVectorEnv(
             [lambda: gym.make(env_name, config=train_config) for _ in range(training_num)]
         )
     if test_num:
-        test_envs = ShmemVectorEnv(
+        test_envs = SubprocVectorEnv(
             [
                 lambda: gym.make(env_name, config=test_config)
                 for _ in range(min(test_num, 8))

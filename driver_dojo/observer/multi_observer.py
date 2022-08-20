@@ -127,12 +127,12 @@ class MultiObserver:
             obs = np.concatenate(
                 [observer.observe() for observer in self.observation_members["vector"]]
             )
-            if runtime_vars.config.observations.cwh: obs = np.rollaxis(obs, 2)
         elif self.observation_spaces["vector"] is None:
             obs = np.concatenate(
                 [observer.observe() for observer in self.observation_members["image"]],
                 axis=2,
             )
+            if runtime_vars.config.observations.cwh: obs = np.rollaxis(obs, 2)
         else:
             obs = {
                 "vector": np.concatenate(

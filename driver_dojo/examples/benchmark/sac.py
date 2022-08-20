@@ -23,7 +23,8 @@ def train_sac(
         test_config,
         log_path,
         eval=False,
-        eval_file='results.yaml'
+        eval_file='results.yaml',
+        eval_checkpoint=False,
 ):
     args = algo_config
     # Create probe, train and test environments
@@ -107,7 +108,11 @@ def train_sac(
     train_collector, test_collector, train_stats, test_stats = make_collectors(**locals())
 
     if eval:
-        policy.load_state_dict(torch.load(os.path.join(log_path, 'policy.pth')), strict=False)
+        if eval_checkpoint:
+            policy.load_state_dict(torch.load(os.path.join(log_path, 'checkpoint.pth'))['model'], strict=True)
+        else:
+            policy.load_state_dict(torch.load(os.path.join(log_path, 'policy.pth')), strict=True)
+
         result = test_collector.collect(n_episode=test_num)
         summary = {
             "n/ep": result["n/ep"],
@@ -132,6 +137,21 @@ def train_sac(
     def save_best_fn(policy):
         torch.save(policy.state_dict(), os.path.join(log_path, 'policy.pth'))
 
+    def save_checkpoint_fn(epoch, env_step, gradient_step):
+        # see also: https://pytorch.org/tutorials/beginner/saving_loading_models.html
+        ckpt_path = os.path.join(log_path, "checkpoint.pth")
+        # Example: saving by epoch num
+        # ckpt_path = os.path.join(log_path, f"checkpoint_{epoch}.pth")
+        torch.save(
+            {
+                "model": policy.state_dict(),
+                "optim_actor": actor_optim.state_dict(),
+                "optim_critic1": critic1_optim.state_dict(),
+                "optim_critic2": critic2_optim.state_dict(),
+            }, ckpt_path
+        )
+        return ckpt_path
+
     # trainer
     result = offpolicy_trainer(
         policy,
@@ -147,6 +167,7 @@ def train_sac(
         test_fn=test_fn,
         logger=logger,
         update_per_step=args.update_per_step,
-        test_in_train=(test_envs is not None)
+        test_in_train=(test_envs is not None),
+        save_checkpoint_fn=save_checkpoint_fn
     )
     pprint.pprint(result)

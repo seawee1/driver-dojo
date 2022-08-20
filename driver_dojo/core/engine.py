@@ -178,7 +178,7 @@ class SUMOEngine:
                 else:
                     self.carla_process = subprocess.Popen(
                         carla_start_cmd,
-                        shell=True,
+                        #shell=True,
                     )
 
                 import time
@@ -249,10 +249,11 @@ class SUMOEngine:
                 else:
                     import signal
                     #os.kill(self.carla_process.pid, signal.CTRL_C_EVENT)
-                    #subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.carla_process.pid)])
+                    del(self.carla_simulation)
+                    #os.kill(self.carla_process.pid, signal.CTRL_BREAK_EVENT)
+                    subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.carla_process.pid)])
                     #signal.CTRL_BREAK_EVENT
-                    self.carla_process.terminate()
-                    self.carla_process.wait()
+                    #self.carla_process.terminate()
 
                 self.carla_simulation = None
                 self.carla_process = None
@@ -325,11 +326,6 @@ class SUMOEngine:
                         observer = [x for x in runtime_vars.observer.observation_members['image'] if isinstance(x,CarlaCameraObserver)][0]
                         camera.listen(observer.listen_rgb)
                         self.carla_sensors.append(camera)
-                        print("New camera")
-
-
-
-
 
             # Destroy old
             for sumo_actor_id in destroyed_actors:

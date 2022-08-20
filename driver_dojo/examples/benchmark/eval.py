@@ -23,9 +23,9 @@ def read_tensorboard(output_path):
 
 def eval(args, output_path):
     if args.clear:
-        if os.path.isfile(os.path.join(output_path, 'output', 'train_results.yaml')):
+        if args.train and os.path.isfile(os.path.join(output_path, 'output', 'train_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'train_results.yaml'))
-        if os.path.isfile(os.path.join(output_path,'output', 'test_results.yaml')):
+        elif os.path.isfile(os.path.join(output_path,'output', 'test_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'test_results.yaml'))
         return
 
@@ -44,6 +44,7 @@ def eval(args, output_path):
         with open_dict(config) as config:
             config.eval = True
             config.eval_file = 'train_results.yaml' if args.train else 'test_results.yaml'
+            config.eval_checkpoint = args.checkpoint
             if args.rnd_seed and not args.train:
                 config.env_test.simulation.seed = random.randint(0, 13371337)
         config.algo.params.test_num = args.num
@@ -69,7 +70,6 @@ def eval_recursive(args, base_path):
         with open(lock_file, 'w') as f:
             f.write('Yo, waddup')
 
-        print(output_path)
         read_tensorboard(output_path)  # TODO
 
         import multiprocessing
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('--pattern', default='*', type=str)
     parser.add_argument('--clear', action='store_true')
     parser.add_argument('--rnd_seed', action='store_true')
+    parser.add_argument('--checkpoint', action='store_true')
     args = parser.parse_args()
 
     if args.recursive:

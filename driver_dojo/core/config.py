@@ -62,7 +62,7 @@ class SimulationConfig:
         str
     ] = None  # Will copy every map (.net.xml and .xodr file) to the folder specified by 'store_for_plotting'
     time_to_teleport: Optional[float] = -1
-    co_sim_to_carla: bool = True
+    co_sim_to_carla: bool = False
     carla_path: str = "C:\\Users\\seegras\\Portables\\CARLA_0.9.13\\WindowsNoEditor\\CarlaUE4.exe"
 
 
