@@ -144,7 +144,7 @@ class VariationConfig:
     traffic_speed: bool = False
     traffic_speed_interval: float = 2.0
     traffic_speed_mult_range: Tuple[float, float] = (0.7, 1.3)
-    traffic_density_range: Tuple[float, float] = (0.3, 0.3)
+    traffic_density_range: Tuple[float, float] = (0.3, 1.0)
 
 
 @dataclass
