@@ -156,15 +156,14 @@ def make_collectors(**kwargs):
     import os
     train_collector, train_stats = None, None
     if kwargs['train_envs']:
-        train_stats = StatsLogger(True, kwargs['logger'], num_envs=len(kwargs['train_envs']))
+        train_stats = StatsLogger(True, kwargs['logger'])
         train_collector = Collector(
             kwargs['policy'], kwargs['train_envs'], VectorReplayBuffer(kwargs['args'].buffer_size, len(kwargs['train_envs'])), preprocess_fn=train_stats.preprocess_fn
         )
     test_collector, test_stats = None, None
     if kwargs['test_envs']:
         test_stats = StatsLogger(False, kwargs['logger'], log_interval=None, num_episodes=kwargs['args'].test_num, buffer_size=kwargs['args'].test_num,
-                                 log_path=os.path.join(kwargs['log_path'], kwargs['eval_file']) if kwargs['eval'] else None,
-                                 num_envs=len(kwargs['test_envs']))
+                                 log_path=os.path.join(kwargs['log_path'], kwargs['eval_file']) if kwargs['eval'] else None)
         test_collector = Collector(kwargs['policy'], kwargs['test_envs'], preprocess_fn=test_stats.preprocess_fn)
 
     return train_collector, test_collector, train_stats, test_stats
