@@ -150,6 +150,7 @@ def _seed(seed=None):
             runtime_vars.np_random_traffic,
             runtime_vars.traffic_seed,
         ) = seeding.np_random(rnd_seed)
+    print(runtime_vars.maps_seed, runtime_vars.traffic_seed)
 
 
 class DriverDojoEnv(gym.Env):
@@ -797,7 +798,7 @@ class DriverDojoEnv(gym.Env):
         distance_to_goal = traci.vehicle.getDrivingDistance(
             runtime_vars.config.simulation.egoID, goal_edgeID, goal_edge_length,
         )
-        at_goal = distance_to_goal < 5.0
+        at_goal = distance_to_goal < 10.0
 
         # Collision
         ego_collided = collision_detection.check_collision()

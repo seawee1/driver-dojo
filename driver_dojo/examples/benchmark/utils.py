@@ -6,7 +6,17 @@ import numpy as np
 
 
 class StatsLogger:
-    def __init__(self, is_train, logger, buffer_size=100, log_interval=5000, num_episodes=None, empty_after_log=True, log_path=None):
+    def __init__(
+            self,
+            is_train,
+            logger,
+            buffer_size=100,
+            log_interval=10,
+            num_episodes=None,
+            empty_after_log=True,
+            num_envs=None,
+            log_path=None
+    ):
         self._prefix = 'train' if is_train else 'test'
         self._logger = logger
         self._log_interval = log_interval
@@ -17,12 +27,9 @@ class StatsLogger:
         self._step = 0
         self._step_last_log = 0
         self._log_path = log_path
+        self._num_envs = num_envs
 
-        self._rews = None
-        self._lens = None
         self._stats = dict(
-            rews=deque(maxlen=buffer_size),
-            lens=deque(maxlen=buffer_size),
             reached_goal=deque(maxlen=buffer_size),
             collision=deque(maxlen=buffer_size),
             off_route=deque(maxlen=buffer_size),
@@ -35,7 +42,6 @@ class StatsLogger:
         # if obs && env_id exist -> reset
         # if obs_next/rew/done/info/env_id exist -> normal step
         # n_envs = len(kwargs['env_id'])
-        # self._step += n_envs
         # if self._rews is None:
         #     self._rews = np.zeros(n_envs)
         #     self._lens = np.zeros(n_envs)
@@ -51,6 +57,7 @@ class StatsLogger:
         #         self._rews[i] = 0.0
         #         self._stats['lens'].append(self._lens[i])
         #         self._lens[i] = 0.0
+        self._step += self._num_envs
 
         # Log other stuff
         if 'info' in kwargs:
@@ -59,8 +66,6 @@ class StatsLogger:
 
             done_kwargs = kwargs['info'][kwargs['done']]
             for k, v in self._stats.items():
-                if k in ['rews', 'lens']:
-                    continue
                 num_hits = np.sum(done_kwargs[k])
                 v.extend([1.0] * num_hits)
                 for i, j in self._stats.items():
@@ -123,14 +128,12 @@ class StatsLogger:
             yaml.dump(summary, f, default_flow_style=False)
 
 
-
 def make_envs(
         env_name,
         train_config,
         test_config,
         training_num,
         test_num,
-        prepare_server=True
 ):
     train_envs, test_envs = None, None
     env = gym.make(env_name, config=train_config)
@@ -154,14 +157,15 @@ def make_collectors(**kwargs):
     import os
     train_collector, train_stats = None, None
     if kwargs['train_envs']:
-        train_stats = StatsLogger(True, kwargs['logger'])
+        train_stats = StatsLogger(True, kwargs['logger'], num_envs=len(kwargs['train_envs']))
         train_collector = Collector(
             kwargs['policy'], kwargs['train_envs'], VectorReplayBuffer(kwargs['args'].buffer_size, len(kwargs['train_envs'])), preprocess_fn=train_stats.preprocess_fn
         )
     test_collector, test_stats = None, None
     if kwargs['test_envs']:
         test_stats = StatsLogger(False, kwargs['logger'], log_interval=None, num_episodes=kwargs['args'].test_num, buffer_size=kwargs['args'].test_num,
-                                 log_path=os.path.join(kwargs['log_path'], kwargs['eval_file']) if kwargs['eval'] else None)
+                                 log_path=os.path.join(kwargs['log_path'], kwargs['eval_file']) if kwargs['eval'] else None,
+                                 num_envs=len(kwargs['test_envs']))
         test_collector = Collector(kwargs['policy'], kwargs['test_envs'], preprocess_fn=test_stats.preprocess_fn)
 
     return train_collector, test_collector, train_stats, test_stats
