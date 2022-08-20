@@ -11,7 +11,7 @@ class StatsLogger:
             is_train,
             logger,
             buffer_size=100,
-            log_interval=10,
+            log_interval=5000,
             num_episodes=None,
             empty_after_log=True,
             num_envs=None,
