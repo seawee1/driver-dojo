@@ -71,6 +71,7 @@ def benchmark(config: DictConfig) -> None:
 
     eval = ('eval' in config and config['eval'])
     eval_file = config['eval_file'] if eval else 'results.yaml'
+    eval_checkpoint = config['eval_checkpoint'] if eval else False
 
     # Start training
     train_fn(
@@ -80,7 +81,8 @@ def benchmark(config: DictConfig) -> None:
         test_config,
         log_path,
         eval=eval,
-        eval_file=eval_file
+        eval_file=eval_file,
+        eval_checkpoint=eval_checkpoint
     )
 
 
