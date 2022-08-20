@@ -136,13 +136,18 @@ if __name__ == "__main__":
             render_navigation=True,
             render_track_ego=True,
             info=True,
+            seed_num_maps=1,
+            seed_num_traffic=1,
         ),
-        observations=dict(
-            observers=[
-                "EgoVehicle",
-                "SubGoals",
-                "CarlaCamera"
-            ],
+        # observations=dict(
+        #     observers=[
+        #         "EgoVehicle",
+        #         "SubGoals",
+        #         "CarlaCamera"
+        #     ],
+        # ),
+        variation=dict(
+            traffic_vTypes=False
         )
     )
 

@@ -14,7 +14,6 @@ class StatsLogger:
             log_interval=5000,
             num_episodes=None,
             empty_after_log=True,
-            num_envs=None,
             log_path=None
     ):
         self._prefix = 'train' if is_train else 'test'
@@ -27,7 +26,6 @@ class StatsLogger:
         self._step = 0
         self._step_last_log = 0
         self._log_path = log_path
-        self._num_envs = num_envs
 
         self._stats = dict(
             reached_goal=deque(maxlen=buffer_size),
@@ -57,7 +55,8 @@ class StatsLogger:
         #         self._rews[i] = 0.0
         #         self._stats['lens'].append(self._lens[i])
         #         self._lens[i] = 0.0
-        self._step += self._num_envs
+        if 'obs_next' in kwargs:
+            self._step += len(kwargs['obs_next'])
 
         # Log other stuff
         if 'info' in kwargs:

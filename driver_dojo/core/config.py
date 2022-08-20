@@ -38,7 +38,7 @@ class SimulationConfig:
     render_record_video: bool = False  # Will convert images into video. Requires ffmpeg
     seed: int = 1337  # The base seed. One to rule them all
     seed_num_maps: Optional[int] = None
-    seed_num_traffic: Optional[int] = 1
+    seed_num_traffic: Optional[int] = None
     tls_off: bool = False  # If traffic lights are present, turn them all off
     traffic_manager_radius: float = 100.0  # How many meters' radius to keep track of traffic state around ego vehicle
     filter_traffic: bool = False  # Filter observable traffic down to junction foes and ego followers and leaders
@@ -144,6 +144,7 @@ class VariationConfig:
     traffic_speed: bool = False
     traffic_speed_interval: float = 2.0
     traffic_speed_mult_range: Tuple[float, float] = (0.7, 1.3)
+    traffic_density_range: Tuple[float, float] = (0.3, 0.3)
 
 
 @dataclass

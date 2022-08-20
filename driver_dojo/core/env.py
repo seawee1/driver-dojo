@@ -204,6 +204,7 @@ class DriverDojoEnv(gym.Env):
 
         runtime_vars.sumo_engine.simulationStep()
 
+        self._traffic_density_episode = runtime_vars.np_random_traffic.uniform(*runtime_vars.config.variation.traffic_density_range)
         # Initialize traffic (if desired -> else: Use provided rou.xml files)
         if runtime_vars.config.simulation.init_traffic:
             self._init_traffic()
@@ -258,9 +259,11 @@ class DriverDojoEnv(gym.Env):
                 logging.info(f"    {c}: {val}")
         logging.info("==============================================")
 
+        self._traffic_density_episode = None
+
+
     def reset(self, seed=None):
         # self.renderer.reset()
-
         # Re-init SUMO engine
         # If we didn't call step() since the last reset() (and seed didn't change) we can save time and skip this.
         # if self.stepped or seed or True:
@@ -270,6 +273,8 @@ class DriverDojoEnv(gym.Env):
         runtime_vars.episode_count += 1
         runtime_vars.scenario_generator.join()
         runtime_vars.sumo_engine.init_engine()
+
+        self._traffic_density_episode = runtime_vars.np_random_traffic.uniform(*runtime_vars.config.variation.traffic_density_range)
 
         if runtime_vars.sumo_engine.simulationStep(): return self.reset()
 
@@ -425,7 +430,7 @@ class DriverDojoEnv(gym.Env):
             if runtime_vars.config.simulation.init_traffic_exclude_edges
             else []
         )
-        traffic_spread = runtime_vars.config.simulation.init_traffic_spread
+        traffic_spread = runtime_vars.config.simulation.init_traffic_spread * 1.0 / self._traffic_density_episode
 
         edges = [
             edge
@@ -557,7 +562,7 @@ class DriverDojoEnv(gym.Env):
         )
 
     def _insert_traffic(self):
-        period = runtime_vars.config.variation.traffic_routing_period
+        period = runtime_vars.config.variation.traffic_routing_period / self._traffic_density_episode
         start_edges = runtime_vars.config.variation.traffic_routing_start_edges
         goal_strat = runtime_vars.config.variation.traffic_routing_goal_strategy
 
