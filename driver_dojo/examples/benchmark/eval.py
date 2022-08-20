@@ -25,7 +25,7 @@ def eval(args, output_path):
     if args.clear:
         if args.train and os.path.isfile(os.path.join(output_path, 'output', 'train_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'train_results.yaml'))
-        elif os.path.isfile(os.path.join(output_path,'output', 'test_results.yaml')):
+        if os.path.isfile(os.path.join(output_path,'output', 'test_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'test_results.yaml'))
         return
 
