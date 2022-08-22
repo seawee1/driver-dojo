@@ -81,9 +81,9 @@ class StatsLogger:
                 "goal": np.mean(self._stats['reached_goal']),
                 "goal_std": np.std(self._stats['reached_goal']),
                 "collision": np.mean(self._stats['collision']),
-                "collision_std": np.mean(self._stats['collision_std']),
+                "collision_std": np.std(self._stats['collision']),
                 "off_route": np.mean(self._stats['off_route']),
-                "off_route_std": np.mean(self._stats['off_route_std']),
+                "off_route_std": np.std(self._stats['off_route']),
             }
 
             if self._log_path:
