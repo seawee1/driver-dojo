@@ -75,10 +75,15 @@ class StatsLogger:
             self._step_last_log = self._step
             summary = {
                 "timeout": np.mean(self._stats['timeout']),
+                "timeout_std": np.std(self._stats['timeout']),
                 "timeout_standing_still": np.mean(self._stats['timeout_standing_still']),
+                "timeout_standing_still_std": np.std(self._stats['timeout_standing_still']),
                 "goal": np.mean(self._stats['reached_goal']),
+                "goal_std": np.std(self._stats['reached_goal']),
                 "collision": np.mean(self._stats['collision']),
+                "collision_std": np.mean(self._stats['collision_std']),
                 "off_route": np.mean(self._stats['off_route']),
+                "off_route_std": np.mean(self._stats['off_route_std']),
             }
 
             if self._log_path:

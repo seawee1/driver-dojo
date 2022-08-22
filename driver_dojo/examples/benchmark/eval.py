@@ -23,10 +23,12 @@ def read_tensorboard(output_path):
 
 def eval(args, output_path):
     if args.clear:
-        if args.train and os.path.isfile(os.path.join(output_path, 'output', 'train_results.yaml')):
+        if os.path.isfile(os.path.join(output_path, 'output', 'train_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'train_results.yaml'))
         if os.path.isfile(os.path.join(output_path,'output', 'test_results.yaml')):
             os.remove(os.path.join(output_path, 'output', 'test_results.yaml'))
+        if os.path.isfile(os.path.join(output_path,'output', 'eval_results.yaml')):
+            os.remove(os.path.join(output_path, 'output', 'eval_results.yaml'))
         return
 
     wd = os.getcwd()
@@ -39,16 +41,23 @@ def eval(args, output_path):
             overrides=override_config,
         )
 
-        if args.train:
-            config.env_test = config.env_train
         with open_dict(config) as config:
+            if args.val:
+                config.env_test = config.env_train
+                config.env_test.simulation.seed_num_maps = None
+                config.eval_file = 'val_results.yaml'
+            elif args.train:
+                config.env_test = config.env_train
+                config.eval_file = 'train_results.yaml'
+            else:
+                config.eval_file = 'test_results.yaml'
+
             config.eval = True
-            config.eval_file = 'train_results.yaml' if args.train else 'test_results.yaml'
             config.eval_checkpoint = args.checkpoint
             if args.rnd_seed and not args.train:
                 config.env_test.simulation.seed = random.randint(0, 13371337)
-        config.algo.params.test_num = args.num
-        config.algo.params.training_num = None
+            config.algo.params.test_num = args.num
+            config.algo.params.training_num = None
 
         benchmark(config)
 
@@ -101,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--clear', action='store_true')
     parser.add_argument('--rnd_seed', action='store_true')
     parser.add_argument('--checkpoint', action='store_true')
+    parser.add_argument('--val', action='store_true')
     args = parser.parse_args()
 
     if args.recursive:
