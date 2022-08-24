@@ -57,6 +57,7 @@ class StatsLogger:
         #         self._lens[i] = 0.0
         if 'obs_next' in kwargs:
             self._step += len(kwargs['obs_next'])
+            print(self._prefix, kwargs['info']['maps_seed'], kwargs['info']['traffic_seed'])
 
         # Log other stuff
         if 'info' in kwargs:

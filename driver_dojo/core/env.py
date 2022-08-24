@@ -150,7 +150,6 @@ def _seed(seed=None):
             runtime_vars.np_random_traffic,
             runtime_vars.traffic_seed,
         ) = seeding.np_random(rnd_seed)
-    print(runtime_vars.maps_seed, runtime_vars.traffic_seed)
 
 
 class DriverDojoEnv(gym.Env):
@@ -881,6 +880,8 @@ class DriverDojoEnv(gym.Env):
         info = dict(
             cost=(1 if ego_collided else 0),  # Many safety-related methods need this
             level_seed=runtime_vars.level_seed,  # Methods like PLR make use of this
+            maps_seed=runtime_vars.maps_seed,
+            traffic_seed=runtime_vars.traffic_seed,
             time_step=runtime_vars.time_step,
             reached_goal=at_goal,
             collision=ego_collided,  # For stats
