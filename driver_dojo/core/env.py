@@ -1,890 +1,355 @@
-import os
+import sys
 
-from os.path import join as pjoin
+from driver_dojo.core.carla_engine import CarlaEngine
+from driver_dojo.observer.carla import CarlaCameraObserver
+
+
 import gym
-import sumolib.geomhelper
 import traci
 import logging
 import logging.config
-from traci.exceptions import TraCIException
-import tempfile
+
+from pyglet.window import key
+from omegaconf import DictConfig, OmegaConf
 import string
-import gym.utils.seeding as seeding
-import xml.etree.cElementTree as ET
 import numpy as np
 from omegaconf import OmegaConf
+from visdom import Visdom
 
-from driver_dojo.actions import DirectActions, SemanticActions
-from driver_dojo.common.utils import polygon_circle_shape
-from driver_dojo.navigation import SUMOMap, SubGoalManager, WaypointManager
-from driver_dojo.vehicle import TUMVehicle, TPSVehicle
-from driver_dojo.variation.scenario_generator import ScenarioGenerator
-from driver_dojo.observer import (
-    EgoVehicleObserver,
-    MultiObserver,
-    RadiusVehicleObserver,
-    WaypointObserver,
-)
-from driver_dojo.observer import (
-    BirdsEyeObserver,
-    AvailableOptionsObserver,
-    SubGoalObserver,
-    RoadShapeObserver,
-    CarlaCameraObserver
-)
+from driver_dojo.actions import DirectActions, SemanticActions, BaseActions
 from driver_dojo.common import TrafficManager
-from driver_dojo.variation import TrafficRandomizer
-import driver_dojo.common.collision_detection as collision_detection
-import driver_dojo.common.runtime_vars as runtime_vars
+from driver_dojo.common.road_manager import StreetMap
 from driver_dojo.core import SUMOEngine
+from driver_dojo.graphics.renderer import Renderer
+from driver_dojo.scenarios.basic_scenarios import BasicScenario
+from driver_dojo.scenarios.scenario_manager import ScenarioManager
+from driver_dojo.vehicle.attachments import SubGoalAttachment, WaypointAttachment  # , TrafficRandomizerAttachment
+from driver_dojo.vehicle import TUMVehicle, GodVehicle, BaseVehicle
+import driver_dojo.common.collision_detection as collision_detection
 from driver_dojo.core.config import *
 from driver_dojo.core.types import ActionSpace
-
-
-# from driver_dojo.render.renderer import Renderer
-
-
-def _init_sumo_paths():
-    # We will save server-specific files here
-    temp_path = tempfile.mkdtemp(prefix="sumo_")
-
-    if (
-            runtime_vars.config["variation"]["network"]
-            or runtime_vars.config["variation"]["network_netgenerate"]
-    ):
-        runtime_vars.config["simulation"]["net_path"] = pjoin(
-            temp_path, f"{runtime_vars.sumo_label}.net.xml"
-        )
-    if runtime_vars.config["variation"]["traffic_routing_randomTrips"]:
-        runtime_vars.config["simulation"]["route_path"] = pjoin(
-            temp_path, f"{runtime_vars.sumo_label}.rou.xml"
-        )
-    if runtime_vars.config["variation"]["traffic_vTypes"]:
-        if runtime_vars.config["simulation"]["add_path"] is None:
-            runtime_vars.config["simulation"]["add_path"] = ""
-        else:
-            runtime_vars.config["simulation"]["add_path"] += ","
-        runtime_vars.config["simulation"]["add_path"] += pjoin(
-            temp_path, f"{runtime_vars.sumo_label}.add.xml"
-        )
-
-    # Create {label}.sumocfg
-    runtime_vars.sumocfg_path = pjoin(
-        temp_path, f"{runtime_vars.sumo_label}.sumocfg"
-    )
-    root = ET.Element("configuration")
-    inp = ET.SubElement(root, "input")
-    ET.SubElement(
-        inp, "net-file", value=runtime_vars.config["simulation"]["net_path"]
-    )
-    if runtime_vars.config["simulation"]["route_path"]:
-        ET.SubElement(
-            inp, "route-files", value=runtime_vars.config["simulation"]["route_path"]
-        )
-    tree = ET.ElementTree(root)
-    tree.write(runtime_vars.sumocfg_path)
-
-    runtime_vars.temp_path = temp_path
-
-
-def _init_seeding():
-    # We initialize the np_random RandomGenerator with the specified seed
-    runtime_vars.np_random, _ = seeding.np_random(
-        runtime_vars.config["simulation"]["seed"]
-    )
-
-    # In case we use a list of seeds for the scenarios and/or traffic, create the seed lists.
-    if (
-            runtime_vars.config["simulation"]["seed_num_maps"]
-            and not runtime_vars.seed_list_maps
-    ):
-        runtime_vars.seed_list_maps = [
-            runtime_vars.np_random.randint(13371137)
-            for _ in range(runtime_vars.config["simulation"]["seed_num_maps"])
-        ]
-    if (
-            runtime_vars.config["simulation"]["seed_num_traffic"]
-            and not runtime_vars.seed_list_traffic
-    ):
-        runtime_vars.seed_list_traffic = [
-            runtime_vars.np_random.randint(13371137)
-            for _ in range(runtime_vars.config["simulation"]["seed_num_traffic"])
-        ]
-
-
-def _seed(seed=None):
-    if not seed:
-        seed = runtime_vars.np_random.randint(13371337)
-
-    runtime_vars.np_random, runtime_vars.level_seed = seeding.np_random(seed)
-
-    # Map generation seeding
-    if runtime_vars.seed_list_maps:
-        seed_index = runtime_vars.np_random.randint(
-            0, len(runtime_vars.seed_list_maps)
-        )
-        (
-            runtime_vars.np_random_maps,
-            runtime_vars.maps_seed,
-        ) = seeding.np_random(runtime_vars.seed_list_maps[seed_index])
-
-    else:
-        rnd_seed = runtime_vars.np_random.randint(13371337)
-        (
-            runtime_vars.np_random_maps,
-            runtime_vars.maps_seed,
-        ) = seeding.np_random(rnd_seed)
-
-    # Traffic seeding
-    if runtime_vars.seed_list_traffic:
-        seed_index = runtime_vars.np_random.randint(
-            0, len(runtime_vars.seed_list_traffic)
-        )
-        (
-            runtime_vars.np_random_traffic,
-            runtime_vars.traffic_seed,
-        ) = seeding.np_random(runtime_vars.seed_list_traffic[seed_index])
-    else:
-        rnd_seed = runtime_vars.np_random.randint(13371337)
-        (
-            runtime_vars.np_random_traffic,
-            runtime_vars.traffic_seed,
-        ) = seeding.np_random(rnd_seed)
+from driver_dojo.observer import (
+    MultiObserver,
+    EgoVehicleObserver,
+    TrafficObserver,
+    WaypointObserver,
+    AvailableOptionsObserver,
+    SubGoalObserver,
+    BirdsEyeObserver,
+    RoadShapeLidarObserver, BaseObserver,
+)
 
 
 class DriverDojoEnv(gym.Env):
-    metadata = {"render_modes": []}
+    metadata = {"render_modes": ['human', 'rgb_array', 'rgb_array_map']}
 
-    def __init__(self, config=None, _config=None):
-        # Initialize config
-        # 'config' is for external configuration, whereas '_config' is used for internal configuration.
-        # config defaults defined inside config.py < config_ < config
-        #   => You can overwrite everything externally with specifications through the 'config' parameter.
-        self.config = Config()
+    def __init__(
+            self,
+            config: DictConfig = None,
+            _config: DictConfig = None,
+            render_mode='rgb_array'
+    ):
+        c = Config()
         if _config:
-            self.config = OmegaConf.merge(self.config, _config)
+            c = OmegaConf.merge(c, _config)
         if config:
-            self.config = OmegaConf.merge(self.config, config)
-        runtime_vars.config = self.config
+            c = OmegaConf.merge(c, config)
+        self.config = c
 
-        # Set logging level
-        if runtime_vars.config.simulation.info:
-            logging.basicConfig(level=logging.INFO)
-        else:
-            logging.basicConfig(level=logging.WARNING)
-            # logger = logging.getLogger()
-            # logger.propagate = False
-            # logger.disable = True
+        os.makedirs(self.config.simulation.work_path, exist_ok=True)  # Create work directory
 
-        # Initial seeding hook
-        _init_seeding()
-        _seed()
+        logging_level = logging.INFO if self.config.debug.verbose else logging.CRITICAL
+        logging.basicConfig(level=logging_level)
 
-        # Set SUMO server label
-        literals = string.ascii_uppercase + string.digits
-        runtime_vars.sumo_label = "".join(
+        literals = string.ascii_uppercase + string.digits  # Set identifying label for SUMOEngine
+        self.sumo_label: str = "".join(
             [literals[np.random.randint(0, len(literals))] for _ in range(20)]
         )
 
-        # Set simulation file paths, create tmp folder, initialize .sumocfg file
-        _init_sumo_paths()
+        self.sumo_engine: SUMOEngine = SUMOEngine(self.config, self.sumo_label)
+        self.street_map: StreetMap = StreetMap()
+        self.traffic_manager: TrafficManager = TrafficManager(self.config)
+        self.scenario_manager: ScenarioManager = ScenarioManager(self.config)
+        self.renderer: Renderer = Renderer(self.config, self.traffic_manager, self.street_map)
+        self.vehicle: BaseVehicle = self._setup_vehicle()
+        observer_setup: Tuple[MultiObserver, List[BaseObserver]] = self._setup_observer()
+        self.observer, self.carla_observers = observer_setup
+        self.actions: BaseActions = self._setup_actions()
+        self.carla_engine = None
+        if self.config.simulation.carla_co_simulation:
+            self.carla_engine: CarlaEngine = CarlaEngine(self.config, self.traffic_manager, self.carla_observers)
 
-        # Create core objects
-        runtime_vars.sumo_engine = SUMOEngine()
-        runtime_vars.sumo_map = SUMOMap()
-        runtime_vars.traffic_manager = TrafficManager()
-        runtime_vars.scenario_generator = ScenarioGenerator()
+        self.observation_space: np.ndarray = self.observer.observation_space  # TODO: rename to `.space` for clarity
+        self.action_space: np.ndarray = self.actions.action_space
 
-        # Create the scenario, wait until created.
-        runtime_vars.scenario_generator.step()
-        runtime_vars.scenario_generator.join()
-        # Initialize the engine
-        runtime_vars.traci = runtime_vars.sumo_engine.init_engine()
+        self.scenario: Optional[BasicScenario] = None  # Helper variables
+        self._time_step: int = 0
+        self._standing_still_since: int = 0
+        self._last_sub_goals: List = list()
+        self._vis = None
+        self._episode_count = -1
+        self.render_mode = render_mode
+        self.traci = None
 
-        runtime_vars.sumo_engine.simulationStep()
-
-        self._traffic_density_episode = runtime_vars.np_random_traffic.uniform(*runtime_vars.config.variation.traffic_density_range)
-        # Initialize traffic (if desired -> else: Use provided rou.xml files)
-        if runtime_vars.config.simulation.init_traffic:
-            self._init_traffic()
-        # Initialize ego (if desired -> else: search for vehicle 'egoID' and route it along 'route_ego'
-        if runtime_vars.config.simulation.init_ego:
-            self._init_ego()
-
-        # We have to do a first initialisation step
-        runtime_vars.sumo_engine.simulationStep()
-
-        # Start the next generation in the background.
-        runtime_vars.scenario_generator.step()
-
-        # Initialize core environment objects
-        runtime_vars.sumo_map = SUMOMap()
-        runtime_vars.traffic_manager = TrafficManager()
-        runtime_vars.vehicle = self._create_vehicle()
-
-        # The renderer TODO
-        # self.renderer = Renderer()
-
-        # Initialize observation_space and action_space
-        # TODO: remove @property decorators. They're a little to artsy here.
-        self._observer = None
-        self._observation_space = None
-        self._observation_space = (
-            self.observation_space
-        )  # We do this to trigger initialization of MultiObserver object
-        self._actions = None
-        self._action_space = None
-        self._action_space = self.action_space  # Same here
-
-        # Helper variables
-        self._last_sub_goals = None
-        self.stepped = False
-        self.time_step = None
-        self.standing_still_for = None
-        self._rendered_waypointIDs = None
-        self._rendered_goalIDs = None
-        self._config = None
-        self._time_since_last_insert = 0.0
-        runtime_vars.episode_count = 0
-
-        logging.info(f"Working in temporary directory {runtime_vars.temp_path}")
-
-        logging.info("==============================================")
-        logging.info("=================CONFIGURATION================")
-        logging.info("==============================================")
-        for cat, d in runtime_vars.config.items():
-            logging.info(cat)
-            for c, val in d.items():
-                logging.info(f"    {c}: {val}")
-        logging.info("==============================================")
-
-        self._traffic_density_episode = None
-
-
-    def reset(self, seed=None):
-        # self.renderer.reset()
-        # Re-init SUMO engine
-        # If we didn't call step() since the last reset() (and seed didn't change) we can save time and skip this.
-        # if self.stepped or seed or True:
-        # Seeding
-        _seed(seed)
-
-        runtime_vars.episode_count += 1
-        runtime_vars.scenario_generator.join()
-        runtime_vars.sumo_engine.init_engine()
-
-        self._traffic_density_episode = runtime_vars.np_random_traffic.uniform(*runtime_vars.config.variation.traffic_density_range)
-
-        if runtime_vars.sumo_engine.simulationStep(): return self.reset()
-
-        # Initialize traffic (if desired -> else: Use provided rou.xml files)
-        if runtime_vars.config.simulation.init_traffic:
-            self._init_traffic()
-        # Initialize ego (if desired -> else: search for vehicle 'egoID' and route it along 'route_ego'
-        if runtime_vars.config.simulation.init_ego:
-            self._init_ego()
-
-        # Do initial simulation step
-        if runtime_vars.sumo_engine.simulationStep(): return self.reset()
-        runtime_vars.scenario_generator.step()
-
-        # Rebuild lane graph for routing and sub-goaling
-        runtime_vars.sumo_map.build_lane_graph()
-
-        # Track ego vehicle in GUI if requested
-        if (
-                runtime_vars.config["simulation"]["render"]
-                and runtime_vars.config["simulation"]["render_track_ego"]
-        ):
-            runtime_vars.traci.gui.trackVehicle(
-                traci.gui.DEFAULT_VIEW, runtime_vars.config["simulation"]["egoID"]
+        if self.config.debug.debug:  # Setup visdom for debugging
+            vis_args = dict(
+                server=self.config.debug.visdom_host,
+                port=self.config.debug.visdom_port,
+                log_to_filename=self.config.debug.visdom_log_path,
+                raise_exceptions=True
             )
-            runtime_vars.traci.gui.setZoom(traci.gui.DEFAULT_VIEW, 200.0)
+            try:
+                self._vis = Visdom(**vis_args)
+            except ConnectionError:  # If no visdom server is running, we log it to a offline file. Replay with `self._viz.replay_log(file_path)`
+                raise ConnectionError('Please start a visdom server first to use the debugging mode via issuing `visdom` in a command line!')
+                # TODO: Right now, visdom seems to be bugged and not work properly in offline mode
+                # if vis_args['log_to_filename'] is None:
+                #     vis_args['log_to_filename'] = f'visdom_{self.sumo_label}'
+                # vis_args['offline'] = True
+                # self._vis = Visdom(**vis_args)
 
-        # Resets
-        runtime_vars.traffic_manager.reset()
-        runtime_vars.traffic_manager.step()  # We need to step one time to initialize storage
-        runtime_vars.vehicle.reset()
-        self._observer.reset()
+        logging.info(OmegaConf.to_yaml(self.config))
 
-        # Initialize the environment by letting it run for 'init_time' seconds
-        num_init_steps = int(
-            runtime_vars.config["simulation"]["init_time"]
-            / runtime_vars.config["simulation"]["dt"]
-        )
-        for i in range(num_init_steps):
-            # Insert new traffic
-            if runtime_vars.config.variation.traffic_routing:
-                self._insert_traffic()
+    def reset(self, seed=None, **kwargs):
+        super().reset(seed=seed)
 
-            if runtime_vars.sumo_engine.simulationStep(): return self.reset()
-            runtime_vars.vehicle.reset()
-            runtime_vars.traffic_manager.step()
+        self.scenario: BasicScenario = self.scenario_manager.step()  # Get new scenario
+        self.traci = self.sumo_engine.reset(self.scenario)  # Load it into the SUMO engine
+        if self.config.simulation.carla_co_simulation:
+            self.carla_engine.reset(self.scenario)
 
-        # Reset the state held by the BaseActions sibling
-        self._actions.reset()
+        self.traffic_manager.reset(self.traci)  # Reset the traffic state
+        self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
+        while self.config.simulation.egoID not in self.traffic_manager.actor_ids:  # Run simulation until ego was added
+            self.sumo_engine.simulationStep()
+            if self.carla_engine is not None:
+                self.carla_engine.simulationStep()
+            self.traffic_manager.step()
 
-        # Other variables
-        self.time_step = 0
-        runtime_vars.time_step = self.time_step
-        self.standing_still_for = 0
-        self._rendered_waypointIDs = []
-        self._rendered_goalIDs = []
-        self._time_since_last_insert = 0.0
-        self.stepped = False
+        self.street_map.reset(self.scenario)  # Reload lane-graph and stuff
+        self.vehicle.reset()
+        self.renderer.reset(self.traci, self.vehicle, self.scenario)  # Has to be done after RoadManager.reset() due to lane_graph being used for rendering
+        self.renderer.step()
+        self.actions.reset()
+        self.observer.reset()
 
-        obs = self._observer.step()
+        self._time_step = 0
+        self._episode_count += 1
+        self._standing_still_since = 0  # Used for 'standing still' timeout
+        self._last_sub_goals = self.vehicle.sub_goals  # Used for reward calculation when consuming sub-goals
+        # self.traci.vehicle.subscribeContext('ego', traci.constants.CMD_GET_VEHICLE_VARIABLE, dist=50.0)
+        # self.traci.vehicle.addSubscriptionFilterTurn(downstreamDist=100.0, foeDistToJunction=20.0)
+        obs = self.observer.step()
         return obs
 
-    def _dummy_return(self):
-        obs = np.zeros(self.action_space.shape, dtype=np.float32)
-        rew = 0.0
-        done = True
-        info = dict(
-            cost=0,  # Many safety-related methods need this
-            level_seed=runtime_vars.level_seed,  # Methods like PLR make use of this
-            time_step=runtime_vars.time_step,
-            reached_goal=False,
-            collision=False,  # For stats
-            timeout=False,
-            timeout_standing_still=False,
-            off_route=False,
-        )
-        return obs, rew, done, info
+    def _overwrite_action_with_input(self, action):
+        keyboard_state = self.renderer.keyboard_state
+        if keyboard_state is None or len(keyboard_state) == 0:
+            return action
+
+        key_map = self.config.simulation.keyboard_to_action  # Defines which actions to trigger by which keyboard input
+
+        if key.R in keyboard_state and keyboard_state[key.R]:  # Reset the environment on `R`
+            self.reset()
+            return self.actions.noop_action
+        elif key.P in keyboard_state and keyboard_state[key.P]:
+            while True:
+                import time
+                time.sleep(10)
+
+        relevant_keys_pressed = [k for k, v in keyboard_state.items() if v and k in key_map.keys()]
+        if len(relevant_keys_pressed) == 0:  # Do a NOOP action
+            action = self.actions.noop_action
+        else:  # Do one of the actions
+            action = key_map[relevant_keys_pressed[0]]
+        return action
 
     def step(self, action):
-        # TODO
-        # self.renderer.step()
+        if self.config.simulation.interactive:  # We overwrite with keyboard inputs
+            action = self._overwrite_action_with_input(action)
 
-        self.stepped = True
-        self._last_sub_goals = runtime_vars.vehicle.sub_goals
+        self._action_loop(action)  # Perform the action
+        im = self.renderer.step()
 
-        self._action_loop(action)
+        if self.config.debug.debug:
+            self._debug_routine()
 
-        obs = self._observer.step()
-        reward, done, info = self._reward_done_info
+        obs = self.observer.step()
+        reward, done, info = self._reward_done_info(self.scenario)
 
-        # Record images/videos
-        if runtime_vars.config.simulation.render_record:
-            self._record()
-
+        self._last_sub_goals = self.vehicle.sub_goals
         return obs, reward, done, info
 
-    def render(self, mode="human"):
-        # sumo-gui is doing our rendering
-        return
+    def render(self, mode="rgb_array"):
+        if mode == 'human':
+            self.renderer.visible = True
+        elif mode == 'rgb_array':
+            return self.renderer.get_image()
+        elif mode == 'rgb_array_map':
+            return self.renderer.get_image(global_view=True)
 
     def close(self):
-        # Close the engine
-        runtime_vars.sumo_engine.close_engine()
-
-    def _calc_target_edge(self, startID, edgeIDs, strat):
-        # TODO: I don't like this whole . Can definitely be implemented more nicely.
-        # Find out proper goal edge
-        if strat == "min-or-0":  # Strategy for Highway Scenarios
-            if "-" in startID:
-                target_edge = str(min(edgeIDs))
-            else:
-                target_edge = str(0)
-        elif strat == "highway-exit":
-            if "-" in startID:
-                if startID == "-3":
-                    target_edge = "-3"
-                else:
-                    target_edge = runtime_vars.np_random_traffic.choice(["-3", "-2"])
-                # If this is the case, we have a splitting road that is converted into "0$0", "0$1" and "0#2"
-            else:
-                target_edge = "0#0"
-        elif strat == "same":
-            target_edge = None
-        elif strat == "intersection":
-            if "-" in startID:
-                return None
-            num_edges = max(edgeIDs) + 1
-            target_edges = [
-                -x for x in range(0, num_edges) if abs(int(startID)) != abs(x)
-            ]
-            target_edge = runtime_vars.np_random_traffic.choice(target_edges)
-            if target_edge == 0:
-                target_edge = str("-0")
-            else:
-                target_edge = str(target_edge)
-        elif strat == "roundabout":
-            if "out" in startID:
-                return None
-            edgeIDs = [id for id in edgeIDs if "out" in id]
-            target_edge = runtime_vars.np_random_traffic.choice(edgeIDs)
-        else:
-            raise NotImplementedError
-
-        if target_edge == startID:
-            return None
-        return target_edge
-
-    def _init_traffic(self):
-        # Read in from config
-        dest_strat = runtime_vars.config.simulation.init_traffic_goal_strategy
-        exclude_edgeIDs = (
-            runtime_vars.config.simulation.init_traffic_exclude_edges
-            if runtime_vars.config.simulation.init_traffic_exclude_edges
-            else []
-        )
-        traffic_spread = runtime_vars.config.simulation.init_traffic_spread * 1.0 / self._traffic_density_episode
-
-        edges = [
-            edge
-            for edge in runtime_vars.net.getEdges(withInternal=False)
-            if edge.getLength() > 1.0
-        ]
-        edgeIDs = [edge.getID() for edge in edges]
-        edges_num_vehicles = dict()
-        street_area = 0.0
-        # Find out total area of street network
-        for edge in edges:
-            area = edge.getLength() * len(edge.getLanes())
-            street_area += area
-            edges_num_vehicles[edge.getID()] = area
-
-        # Define how many vehicles to spawn in total
-        num_vehicles = int(round(street_area / traffic_spread))
-        for edge in edges:
-            if edge.getID() in exclude_edgeIDs:
-                continue
-            edges_num_vehicles[edge.getID()] = int(
-                round(edges_num_vehicles[edge.getID()] / street_area * num_vehicles)
-            )
-
-        # We have to remove those. These are edges part of a merge/split.
-        # TODO: refactor
-        if runtime_vars.config.simulation.init_ego_strategy != "roundabout":
-            edgeIDs_goal = [int(edgeID) for edgeID in edgeIDs if "#" not in edgeID]
-        else:
-            edgeIDs_goal = edgeIDs
-
-        for edgeID, num in edges_num_vehicles.items():
-            if edgeID in exclude_edgeIDs:
-                continue
-
-            target_edge = self._calc_target_edge(
-                edgeID,
-                edgeIDs_goal,
-                runtime_vars.config.simulation.init_traffic_goal_strategy,
-            )
-
-            for i in range(num):
-                routeID = f"route_trafficInit_{edgeID}_{i}"
-                vehID = f"trafficInit_{edgeID}_{i}"
-                route_edges = [edgeID]
-                if (
-                        target_edge
-                ):  # If None, we only drive the current edge from start to finish
-                    route_edges += [target_edge]
-                runtime_vars.traci.route.add(routeID, route_edges)
-
-                typeID = "DEFAULT_VEHTYPE" if not runtime_vars.config.variation.traffic_vTypes else f"vehDist{runtime_vars.np_random_maps.randint(0, runtime_vars.config.variation.vTypeDistribution_num)}"
-                runtime_vars.traci.vehicle.add(
-                    vehID,
-                    routeID,
-                    typeID=typeID,
-                    departPos="random_free",
-                    departLane="best",
-                    departSpeed="random",
-                )
-
-                logging.debug(
-                    f"Traffic init: {vehID} on edge {edgeID} towards {route_edges[-1]}."
-                )
-
-    def _init_ego(self):
-        egoID = runtime_vars.config.simulation.egoID
-        routeID = runtime_vars.config.simulation.routeID
-        start_edgeID = runtime_vars.config.simulation.init_ego_start_edge
-        goal_edgeID = runtime_vars.config.simulation.init_ego_goal_edge
-
-        start_edge = runtime_vars.net.getEdge(start_edgeID)
-        if goal_edgeID != "":
-            if '*' in goal_edgeID:
-                # TODO: Dirty
-                import random
-                candidates = [x for x in runtime_vars.net.getEdges() if 'out' in x.getID() and x.getID() != 'out0']
-                goal_edgeID = random.choice(candidates).getID()
-
-            goal_edge = runtime_vars.net.getEdge(goal_edgeID)
-            route_edges = [
-                edge.getID()
-                for edge in runtime_vars.net.getOptimalPath(start_edge, goal_edge)[0]
-            ]
-            runtime_vars.route_edges = [
-                edge.getID()
-                for edge in runtime_vars.net.getOptimalPath(
-                    start_edge, goal_edge, withInternal=True
-                )[0]
-            ]
-        else:
-            route_edges = [start_edgeID]
-            runtime_vars.route_edges = [start_edgeID]
-
-        departPos = (
-            runtime_vars.config.vehicle.start_offset
-            if runtime_vars.config.vehicle.start_offset
-            else "free"
-        )
-        departSpeed = (
-            runtime_vars.config.vehicle.start_velocity
-            if runtime_vars.config.vehicle.start_velocity
-            else "random"
-        )
-        departLane = (
-            runtime_vars.config.vehicle.lane_offset
-            if runtime_vars.config.vehicle.lane_offset
-            else "free"
-        )
-
-        runtime_vars.traci.route.add(routeID, route_edges)
-        runtime_vars.traci.vehicle.add(
-            egoID,
-            routeID,
-            departPos=departPos,
-            departLane=departLane,
-            departSpeed=departSpeed,
-        )
-        steps = 1
-        while True:
-            runtime_vars.sumo_engine.simulationStep()
-            if traci.vehicle.getRoadID(runtime_vars.config.simulation.egoID) == "":
-                steps += 1
-                continue
-            break
-
-        logging.debug(
-            f"Ego init: {egoID} on edge {start_edgeID} towards {route_edges[-1]} edge after {steps} step(s)."
-        )
-
-    def _insert_traffic(self):
-        period = runtime_vars.config.variation.traffic_routing_period / self._traffic_density_episode
-        start_edges = runtime_vars.config.variation.traffic_routing_start_edges
-        goal_strat = runtime_vars.config.variation.traffic_routing_goal_strategy
-
-        edges = [
-            edge
-            for edge in runtime_vars.net.getEdges(withInternal=False)
-            if edge.getLength() > 1.0
-        ]
-        edgeIDs = [edge.getID() for edge in edges]
-
-        if runtime_vars.config.simulation.init_ego_strategy != "roundabout":
-            edgeIDs_goal = [int(edgeID) for edgeID in edgeIDs if "#" not in edgeID]
-        else:
-            edgeIDs_goal = edgeIDs
-
-        num_inserts = int(self._time_since_last_insert // period)
-        if num_inserts > 0:
-            self._time_since_last_insert = self._time_since_last_insert % period
-            for i in range(num_inserts):
-                if goal_strat == "intersection" and start_edges is None:
-                    start_edge = runtime_vars.np_random_traffic.choice(
-                        [str(edge) for edge in range(max(edgeIDs_goal))]
-                    )
-                elif goal_strat == "roundabout" and start_edges is None:
-                    start_edge = runtime_vars.np_random_traffic.choice(
-                        [id for id in edgeIDs_goal if "in" in id]
-                    )
-                else:
-                    start_edge = runtime_vars.np_random_traffic.choice(start_edges)
-
-                target_edge = self._calc_target_edge(
-                    start_edge, edgeIDs_goal, goal_strat
-                )
-                route_edges = [start_edge]
-                if (
-                        target_edge
-                ):  # If None, we only drive the current edge from start to finish
-                    route_edges += [target_edge]
-
-                routeID = f"route_trafficRunning_{runtime_vars.time_step}_{i}"
-                vehID = f"trafficRunning_{runtime_vars.time_step}_{i}"
-                runtime_vars.traci.route.add(routeID, route_edges)
-
-                runtime_vars.traci.vehicle.add(
-                    vehID,
-                    routeID,
-                    departPos="base",
-                    departLane="free",
-                    departSpeed="random",
-                )
-
-                logging.debug(
-                    f"Traffic spawn: {vehID} on edge {start_edge} towards {route_edges[-1]} edge."
-                )
-        else:
-            self._time_since_last_insert += runtime_vars.config.simulation.dt
+        self.renderer.close()
+        self.sumo_engine.close()
 
     def _action_loop(self, action):
-        for i in range(runtime_vars.config["simulation"]["steps_per_action"]):
-            self._actions.step(action)
-            if runtime_vars.sumo_engine.simulationStep(): return self._dummy_return()
-            runtime_vars.traffic_manager.step()
-            self.time_step += 1
-            runtime_vars.time_step = self.time_step
+        for i in range(self.config.simulation.steps_per_action):
+            self.actions.step(action)  # Do the action
+            self.sumo_engine.simulationStep()
+            if self.carla_engine is not None:
+                self.carla_engine.simulationStep()
+            self.scenario.step(self.traci)  # Perform whatever events the scenario defines
+            self.traffic_manager.step()  # Has to be stepped inside here, due to it being closely connected to SUMOEngine.simulationStep() for correct functioning
+            self._time_step += 1
 
-            if runtime_vars.vehicle.speed == 0.0:
-                self.standing_still_for += 1
+            if self.vehicle.velocity == 0.0:
+                self._standing_still_since += 1
             else:
-                self.standing_still_for = 0
+                self._standing_still_since = 0
 
-        if (
-                runtime_vars.config["simulation"]["render"]
-                and runtime_vars.config["simulation"]["render_navigation"]
-        ):
-            self._render_navigation()
-            self._render_goals()
-
-        # Insert new traffic
-        if runtime_vars.config.variation.traffic_routing:
-            self._insert_traffic()
-
-    def _create_vehicle(self):
-        vehicle_config = runtime_vars.config["vehicle"]
-        egoID = runtime_vars.config["simulation"]["egoID"]
-        dt = runtime_vars.config["simulation"]["dt"]
-        if vehicle_config["dynamics_model"] in [
+    def _setup_vehicle(self):
+        vehicle_config = self.config.vehicle
+        if vehicle_config.dynamics_model in [
             DynamicsModel.KS,
             DynamicsModel.ST,
             DynamicsModel.STD,
             DynamicsModel.MB,
         ]:
-            vehicle = TUMVehicle(
-                vehicle_config, egoID, runtime_vars.traffic_manager, dt
-            )
-        elif vehicle_config["dynamics_model"] == DynamicsModel.TPS:
-            vehicle = TPSVehicle(
-                vehicle_config, egoID, runtime_vars.traffic_manager, dt
-            )
+            vehicle = TUMVehicle(self.config, self.traffic_manager)
+        elif vehicle_config.dynamics_model == DynamicsModel.God:
+            vehicle = GodVehicle(self.config, self.traffic_manager)
         else:
             raise NotImplementedError
 
-        waypoint_manager = WaypointManager()
-        vehicle.attach_waypoint_manager(waypoint_manager)
-        sub_goal_manager = SubGoalManager()
-        vehicle.attach_sub_goal_manager(sub_goal_manager)
-        traffic_randomizer = TrafficRandomizer()
-        vehicle.attach_traffic_randomizer(traffic_randomizer)
-
+        if self.config.actions.space == ActionSpace.Semantic:  # We only need waypoints for semantic actions
+            waypoint_manager = WaypointAttachment(self.config, vehicle, self.street_map)
+            vehicle.attach(waypoint_manager)
+        sub_goal_manager = SubGoalAttachment(self.config, vehicle, self.street_map)
+        vehicle.attach(sub_goal_manager)
+        # traffic_randomizer = TrafficRandomizerAttachment()  # TODO: fix it
+        # vehicle.attach(traffic_randomizer)
         return vehicle
 
-    @property
-    def observation_space(self):
-        if self._observer is not None:
-            return self._observation_space
-
-        observation_config = runtime_vars.config["observations"]
+    def _setup_observer(self) -> Tuple[MultiObserver, List[BaseObserver]]:
+        observation_config = self.config.observations
         observers = []
+        observer_args = [self.config, self.vehicle, self.traffic_manager]
         for obs_name in observation_config["observers"]:
             if obs_name == Observer.EgoVehicle:
-                observers.append(EgoVehicleObserver())
+                o = EgoVehicleObserver(*observer_args)
             elif obs_name == Observer.RadiusVehicle:
-                observers.append(RadiusVehicleObserver())
+                o = TrafficObserver(*observer_args)
             elif obs_name == Observer.Waypoints:
-                observers.append(WaypointObserver())
+                o = WaypointObserver(*observer_args)
             elif obs_name == Observer.SubGoals:
-                observers.append(SubGoalObserver())
+                o = SubGoalObserver(*observer_args)
             elif obs_name == Observer.BirdsEye:
-                observers.append(BirdsEyeObserver())
+                o = BirdsEyeObserver(*observer_args, self.renderer)
             elif obs_name == Observer.AvailableOptions:
-                observers.append(AvailableOptionsObserver())
+                o = AvailableOptionsObserver(*observer_args)
             elif obs_name == Observer.RoadShape:
-                observers.append(RoadShapeObserver())
-            elif obs_name == Observer.CarlaCamera:
-                observers.append(CarlaCameraObserver())
+                o = RoadShapeLidarObserver(*observer_args, self.street_map)
             else:
                 raise NotImplementedError
-        self._observer = MultiObserver(*observers)
-        runtime_vars.observer = self._observer
-        self._observation_space = self._observer.space
+            observers.append(o)
 
-        return self._observation_space
+        carla_observers = []
+        for carla_obs_config in observation_config.carla_observers:
+            if carla_obs_config.sensor_type in [CarlaSensor.RGBCamera, CarlaSensor.DepthCamera]:
+                o = CarlaCameraObserver(*observer_args, carla_obs_config)
+            else:
+                raise NotImplementedError
+            observers.append(o)
+            carla_observers.append(o)
 
-    @property
-    def action_space(self):
-        if self._action_space is not None:
-            return self._action_space
+        return MultiObserver(*observers, config=self.config, vehicle=self.vehicle, traffic_manager=self.traffic_manager), carla_observers
 
-        actions_config = runtime_vars.config["actions"]
+    def _setup_actions(self) -> BaseActions:
+        actions_config = self.config.actions
 
-        if actions_config["space"] in [ActionSpace.Continuous, ActionSpace.Discretized]:
-            self._actions = DirectActions()
-        elif actions_config["space"] == ActionSpace.Semantic:
-            self._actions = SemanticActions()
+        if actions_config.space in [ActionSpace.Continuous, ActionSpace.Discretized]:
+            actions = DirectActions(self.config, self.vehicle)
+        elif actions_config.space == ActionSpace.Semantic:
+            actions = SemanticActions(self.config, self.vehicle)
         else:
             raise NotImplementedError
+        return actions
 
-        self._action_space = self._actions.space
-        return self._action_space
-
-    def _render_goals(self):
-        lambda_poiID = lambda goal: f"goal_{goal.position}"
-
-        sub_goals = runtime_vars.vehicle.sub_goals
-
-        if len(self._rendered_goalIDs) == 0:
-            for goal in sub_goals:
-                try:
-                    id = lambda_poiID(goal)
-                    runtime_vars.traci.polygon.add(
-                        id,
-                        polygon_circle_shape(goal.position, 2.0, num_vert=3),
-                        (255, 255, 0),
-                        fill=True,
-                        layer=9,
-                        lineWidth=1,
-                    )
-                    self._rendered_goalIDs.append(id)
-                except TraCIException:
-                    pass
-        else:
-            i = 0
-            if len(sub_goals) == 0:
-                return
-            id = lambda_poiID(sub_goals[0])
-            while id != self._rendered_goalIDs[i]:
-                runtime_vars.traci.polygon.remove(self._rendered_goalIDs[i])
-                i += 1
-
-            self._rendered_goalIDs = self._rendered_goalIDs[i:]
-
-    def _render_navigation(self):
-        lambda_poiID = lambda waypoint: f"wp_{waypoint.position}"
-
-        waypoints = runtime_vars.vehicle.waypoints
-
-        do_render = True
-        if len(self._rendered_waypointIDs) > 0:
-            first_waypointID = lambda_poiID(waypoints[0])
-            last_waypointID = lambda_poiID(waypoints[-1])
-            if (
-                    first_waypointID == self._rendered_waypointIDs[0]
-                    and last_waypointID == self._rendered_waypointIDs[-1]
-            ):
-                do_render = False
-            else:
-                for id in self._rendered_waypointIDs:
-                    # if poiID not in waypointIDs:
-                    try:
-                        runtime_vars.traci.polygon.remove(id)
-                    except TraCIException:
-                        pass
-                self._rendered_waypointIDs = []
-
-        if len(waypoints) > 0 and do_render:
-            # Render new navigation
-            for waypoint in waypoints:
-                # if poiID not in self.rendered_waypoints:
-                try:
-                    id = lambda_poiID(waypoint)
-
-                    runtime_vars.traci.polygon.add(
-                        id,
-                        polygon_circle_shape(waypoint.position, 1.0),
-                        (255, 0, 0),
-                        fill=True,
-                        layer=10,
-                        lineWidth=1,
-                    )
-                    self._rendered_waypointIDs.append(id)
-                except TraCIException:
-                    pass
-
-    @property
-    def _reward_done_info(self):
-        # Goal
-        goal_edgeID = runtime_vars.route_edges[-1]
-        goal_edge_length = runtime_vars.net.getEdge(goal_edgeID).getLength()
+    def _reward_done_info(self, scenario):
+        goal_edgeID = scenario.route[-1]  # Goal
+        goal_edge_length = scenario.sumo_net.getEdge(goal_edgeID).getLength()
         distance_to_goal = traci.vehicle.getDrivingDistance(
-            runtime_vars.config.simulation.egoID, goal_edgeID, goal_edge_length,
+            self.config.simulation.egoID, goal_edgeID, goal_edge_length,
         )
         at_goal = distance_to_goal < 10.0
 
-        # Collision
-        ego_collided = collision_detection.check_collision()
+        ego_collided = collision_detection.check_collision(self.config.simulation.egoID, self.traffic_manager)  # Collision
 
-        # Off-route
-        if runtime_vars.config.actions.space == ActionSpace.Semantic and not at_goal:
-            # Check if we're out of waypoints
-            off_route = len(runtime_vars.vehicle.waypoints) <= 1
-        else:
-            from sumolib.geomhelper import distancePointToPolygon
-
-            distance_to_lane = distancePointToPolygon(
-                runtime_vars.vehicle.position,
-                runtime_vars.net.getLane(runtime_vars.vehicle.laneID).getShape(),
-            )
-            off_route = runtime_vars.vehicle.laneIndex == -1073741824
-
-            if distance_to_lane > 5.0:
-                off_route = True
-
-            route_idx = runtime_vars.traci.vehicle.getRouteIndex(runtime_vars.config.simulation.egoID)
-            route_edgeID = runtime_vars.traci.vehicle.getRoute(runtime_vars.config.simulation.egoID)[route_idx]
-            edgePoly = runtime_vars.net.getEdge(route_edgeID).getShape()
-            route_dist = sumolib.geomhelper.distancePointToPolygon(runtime_vars.vehicle.position, edgePoly)
-
-            if route_dist > 20.0:
-                off_route = True
+        off_route = True
+        lanes = self.scenario.sumo_net.getNeighboringLanes(*self.vehicle.location[:2], 2.0)
+        if len(lanes) > 0:
+            for lane, dist in lanes:
+                if lane.getEdge().isSpecial():
+                    off_route = False
+                    break
+                elif lane.getEdge().getID() in self.scenario.route:
+                    off_route = False
+                    break
 
         # Check if driving in circles
         driving_in_circles = False
-        if abs(runtime_vars.vehicle.angle) > 4 * 2 * np.pi:
-            driving_in_circles = True
+        # if abs(self.world.vehicle.rotation[1]) > 4 * 2 * np.pi:
+        #     # TODO: I don't think this works in its current state
+        #     # driving_in_circles = True
+        #     pass
 
-        # Timeouts
         timeout = (
-                self.time_step > runtime_vars.config["simulation"]["max_time_steps"]
+                self._time_step > self.config.simulation.max_time_steps
         )
 
         timeout_standing_still = (
-                self.standing_still_for
-                > runtime_vars.config["simulation"]["stand_still_timeout_after"]
+                self._standing_still_since
+                > self.config.simulation.stand_still_timeout_after
         )
 
-        ### Reward
+        # Reward
         reward = 0.0
-        reward_config = runtime_vars.config["reward"]
+        reward_config = self.config.reward
         if at_goal:
-            reward = reward_config["goal_reward"]
+            reward = reward_config.goal_reward
         elif ego_collided:
-            reward = reward_config["collision_penalty"] if ego_collided else 0.0
+            reward = reward_config.collision_penalty
         elif off_route:
-            reward = reward_config["off_route_penalty"]
+            reward = reward_config.off_route_penalty
         elif timeout or timeout_standing_still:
-            reward = reward_config["timeout_penalty"]
+            reward = reward_config.timeout_penalty
         elif driving_in_circles:
-            reward = reward_config["driving_circles_penalty"]
+            reward = reward_config.driving_circles_penalty
         else:
             # Speed reward
             reward += (
-                    reward_config["speed_reward"]
-                    * runtime_vars.vehicle.speed
-                    / runtime_vars.vehicle.v_max
+                    reward_config.speed_reward
+                    * self.vehicle.velocity
+                    / self.vehicle.velocity_max
             )
-            if runtime_vars.vehicle.speed == 0.0:
-                reward += reward_config["stand_still_penalty"]
+            if self.vehicle.velocity == 0.0:
+                reward += reward_config.stand_still_penalty
 
-            # Subgoal reward
-            if len(self._last_sub_goals) > len(runtime_vars.vehicle.sub_goals):
-                reward += reward_config["sub_goal_reward"]
+            # Sub-goal reward
+            if len(self._last_sub_goals) > len(self.vehicle.sub_goals):
+                reward += reward_config.sub_goal_reward
 
-        ### Done
+        # Done
         done = timeout or timeout_standing_still or at_goal or off_route or ego_collided or driving_in_circles
 
-        ### Info
+        # Info
         info = dict(
-            cost=(1 if ego_collided else 0),  # Many safety-related methods need this
-            level_seed=runtime_vars.level_seed,  # Methods like PLR make use of this
-            maps_seed=runtime_vars.maps_seed,
-            traffic_seed=runtime_vars.traffic_seed,
-            time_step=runtime_vars.time_step,
+            cost=int(timeout or timeout_standing_still or off_route or ego_collided or driving_in_circles),
+            time_step=self._time_step,
+            road_seed=scenario.net_seed,
+            traffic_seed=scenario.traffic_seed,
             reached_goal=at_goal,
-            collision=ego_collided,  # For stats
+            collision=ego_collided,
             timeout=timeout,
             timeout_standing_still=timeout_standing_still,
             off_route=off_route,
@@ -892,24 +357,416 @@ class DriverDojoEnv(gym.Env):
 
         return reward, done, info
 
-    def _record(self):
-        assert runtime_vars.config.simulation.render, "Can only record when simulation.render == True"
+    def _debug_routine(self):
+        # Note: install via `pip install -e git://github.com/facebookresearch/visdom.git#egg=visdom` instead of `pip install visdom`
+        first_step = self._time_step == self.config.simulation.steps_per_action
+        if first_step:  # Log image of street network
+            map_im = np.rollaxis(self.renderer.get_image(global_view=True), 2)
+            opts = dict(
+                caption=f'road seed {self.scenario.net_seed}',
+                store_history=True,
+                jpgquality=80
+            )
+            self._vis.image(
+                map_im,
+                win='road layout',
+                opts=opts,
+            )
 
-        parent_path = runtime_vars.config.simulation.render_record
-        os.makedirs(parent_path, exist_ok=True)
-        cur_path = pjoin(parent_path, str(runtime_vars.episode_count))
-        if not os.path.isdir(cur_path):
-            # Create folder
-            os.makedirs(cur_path)
+        if not ((self._time_step - 1) % self.config.debug.step_period) == 0:  # Only log every x steps
+            return
 
-            last_path = pjoin(parent_path, str(runtime_vars.episode_count - 1))
-            if runtime_vars.config.simulation.render_record_video and os.path.isdir(last_path):
-                import ffmpeg
-                (
-                    ffmpeg
-                    .input(f"{last_path}/*.png", pattern_type='glob', framerate=round(1.0 / runtime_vars.config.simulation.dt))
-                    .output(f'{last_path}/video.mp4')
-                    .run()
-                )
+        cur_im = np.rollaxis(self.renderer.get_image(), 2)  # Render current rendered scene
+        self._vis.image(
+            cur_im,
+            win=f'Render, episode {self._episode_count}' if self.config.debug.visdom_split_episodes else 'render',
+            opts=dict(
+                caption=f'traffic seed {self.scenario.traffic_seed}',
+                store_history=True,
+                jpgquality=100
+            )
+        )
 
-        runtime_vars.traci.gui.screenshot(traci.gui.DEFAULT_VIEW, f"{pjoin(cur_path, str(runtime_vars.time_step))}.png")
+        feature_scaling = self.config.observations.feature_scaling is not None
+        relative_features = self.config.observations.relative_to_ego
+        observer_config = self.config.observations.observers
+
+        if feature_scaling:  # For now, we don't support debugging with normalized features
+            logging.info("Didn't log observer outputs to visdom because Config.observations.feature_scaling != None.")
+            return
+
+        if Observer.RadiusVehicle in observer_config:
+            observer = self.observer.get_observer(TrafficObserver)  # Get observer outputs, format values
+            obs = observer.step()
+            obs_labels = observer.explain()
+            xs = [obs[i] for i, x in enumerate(obs_labels) if x == 'x']
+            ys = [obs[i] for i, x in enumerate(obs_labels) if x == 'y']
+            rotations = [obs[i] for i, x in enumerate(obs_labels) if x == 'rotation']
+
+            actor_pos = np.array([0, 0]) if relative_features else self.vehicle.location[:2]
+            X = np.array([[x, y] for x, y in zip(xs, ys)])
+            mask = np.sum(np.abs(X), axis=1) != 0  # Filter out dummy values
+            X = X[mask]
+            X = np.vstack((actor_pos, X))
+            rotations = [x for i, x in enumerate(rotations) if mask.flatten()[i]]
+            rotations = [round(x, 2) for x in rotations]
+            rotations = [0.0] + rotations
+
+            obs_radius = self.config.observations.rvo_radius
+            axis_range = np.array([actor_pos - obs_radius, actor_pos + obs_radius])
+            self._vis.scatter(
+                X=X,
+                opts=dict(
+                    title='RadiusVehicleObserver',
+                    xtickmin=axis_range[0][0],
+                    xtickmax=axis_range[1][0],
+                    ytickmin=axis_range[0][1],
+                    ytickmax=axis_range[1][1],
+                    textlabels=[f'{x}' for x in rotations],
+                ),
+                win='RadiusVehicleObserver',
+            )
+
+        if Observer.EgoVehicle in observer_config:
+            observer = self.observer.get_observer(EgoVehicleObserver)
+            obs = observer.step()
+            obs_labels = observer.explain()
+            text = [f'{label}: {val}' for label, val in zip(obs_labels, obs)]
+            print('EgoVehicle observations')
+            print(text)  # TODO: Log to visdom
+
+        for observer_type in [Observer.Waypoints, Observer.SubGoals]:
+            if observer_type not in observer_config:
+                continue
+
+            observer = self.observer.get_observer(WaypointObserver if observer_type == Observer.Waypoints else SubGoalObserver)
+            obs = observer.step()
+            obs_labels = observer.explain()
+            xs = [obs[i] for i, x in enumerate(obs_labels) if x == 'x']
+            ys = [obs[i] for i, x in enumerate(obs_labels) if x == 'y']
+            match = [obs[i] for i, x in enumerate(obs_labels) if x == 'match_angle']
+            dist = [obs[i] for i, x in enumerate(obs_labels) if x == 'dist']
+            X = np.array([[x, y] for x, y in zip(xs, ys)])
+            textlabels = [f'{round(x, 2), round(y, 2)}' for x, y in zip(dist, match)]
+
+            # Define axis range
+            max_range = (self.config.observations.wp_num * self.config.observations.wp_sampling_dist) if observer_type == Observer.Waypoints else self.config.observations.sub_goal_dist_max
+            x_min = -max_range if relative_features else self.vehicle.location[0] - max_range
+            x_max = max_range if relative_features else self.vehicle.location[0] + max_range
+            y_min = 0.0 if relative_features else self.vehicle.location[1]
+            y_max = max_range if relative_features else self.vehicle.location[1] + max_range
+
+            self._vis.scatter(
+                X=X,
+                opts=dict(
+                    title='WaypointObserver' if observer_type == Observer.Waypoints else 'SubGoalObserver',
+                    xtickmin=x_min,
+                    xtickmax=x_max,
+                    ytickmin=y_min,
+                    ytickmax=y_max,
+                    textlabels=textlabels,
+                ),
+                win='WaypointObserver' if observer_type == Observer.Waypoints else 'SubGoalObserver'
+            )
+
+        if Observer.AvailableOptions in observer_config:
+            observer = [x for x in self.observer.obs_members['vector'] if isinstance(x, AvailableOptionsObserver)][0]
+            obs = observer.step()
+            obs_labels = observer.explain()
+            text = [f'{label}: {val}' for label, val in zip(obs_labels, obs)]
+            print('AvailableOptions observations')
+            print(text)  # TODO: Log to visdom
+
+        if Observer.RoadShape in observer_config:
+            observer = self.observer.get_observer(RoadShapeLidarObserver)
+            obs = observer.step()
+
+            max_range = self.config.observations.rs_ray_dist
+            x_min = -max_range if relative_features else self.vehicle.location[0] - max_range
+            x_max = max_range if relative_features else self.vehicle.location[0] + max_range
+            y_min = 0.0 if relative_features else self.vehicle.location[1]
+            y_max = max_range if relative_features else self.vehicle.location[1] + max_range
+            X = obs.reshape((-1, 2))
+            self._vis_win_road = self._vis.scatter(
+                X=X,
+                opts=dict(
+                    title="RoadShapeObserver",
+                    xtickmin=x_min,
+                    xtickmax=x_max,
+                    ytickmin=y_min,
+                    ytickmax=y_max,
+                ),
+                win="RoadShapeObserver",
+            )
+
+        if Observer.BirdsEye in observer_config:
+            observer = self.observer.get_observer(BirdsEyeObserver)
+            obs = observer.step()
+            obs = np.rollaxis(obs, 2)
+            self._vis.image(
+                obs,
+                opts=dict(
+                    caption='BirdsEyeObserver',
+                    jpgquality=100
+                ),
+                win='BirdsEyeObserver'
+            )
+
+        opts = dict(
+            caption=f'traffic seed {self.scenario.traffic_seed}',
+            store_history=True,
+            jpgquality=100
+        )
+        for i, observer in enumerate(self.carla_observers):
+            obs = observer.step()
+            obs = np.rollaxis(obs, 2)
+            self._vis.image(
+                obs,
+                opts=dict(
+                    caption=f'CarlaObserver{i}',
+                    store_history=True,
+                    jpgquality=100
+                ),
+                win=f'CarlaObserver{i}'
+            )
+
+    # def _calc_target_edge(self, startID, edgeIDs, strat):
+    #     # TODO: I don't like this whole . Can definitely be implemented more nicely.
+    #     # Find out proper goal edge
+    #     if strat == "min-or-0":  # Strategy for Highway Scenarios
+    #         if "-" in startID:
+    #             target_edge = str(min(edgeIDs))
+    #         else:
+    #             target_edge = str(0)
+    #     elif strat == "highway-exit":
+    #         if "-" in startID:
+    #             if startID == "-3":
+    #                 target_edge = "-3"
+    #             else:
+    #                 target_edge = self.world.traffic_seed_sampler.choice(["-3", "-2"])
+    #             # If this is the case, we have a splitting road that is converted into "0$0", "0$1" and "0#2"
+    #         else:
+    #             target_edge = "0#0"
+    #     elif strat == "same":
+    #         target_edge = None
+    #     elif strat == "intersection":
+    #         if "-" in startID:
+    #             return None
+    #         num_edges = max(edgeIDs) + 1
+    #         target_edges = [
+    #             -x for x in range(0, num_edges) if abs(int(startID)) != abs(x)
+    #         ]
+    #         target_edge = self.world.traffic_seed_sampler.choice(target_edges)
+    #         if target_edge == 0:
+    #             target_edge = str("-0")
+    #         else:
+    #             target_edge = str(target_edge)
+    #     elif strat == "roundabout":
+    #         if "out" in startID:
+    #             return None
+    #         edgeIDs = [id for id in edgeIDs if "out" in id]
+    #         target_edge = self.world.traffic_seed_sampler.choice(edgeIDs)
+    #     else:
+    #         raise NotImplementedError
+    #
+    #     if target_edge == startID:
+    #         return None
+    #     return target_edge
+    #
+    # def _init_traffic(self):
+    #     # Read in from config
+    #     dest_strat = self.world.config.simulation.init_traffic_goal_strategy
+    #     exclude_edgeIDs = (
+    #         self.world.config.simulation.init_traffic_exclude_edges
+    #         if self.world.config.simulation.init_traffic_exclude_edges
+    #         else []
+    #     )
+    #     traffic_spread = self.world.config.simulation.init_traffic_spread * 1.0 / self._traffic_density_episode
+    #
+    #     edges = [
+    #         edge
+    #         for edge in self.world.net.getEdges(withInternal=False)
+    #         if edge.getLength() > 1.0
+    #     ]
+    #     edgeIDs = [edge.getID() for edge in edges]
+    #     edges_num_vehicles = dict()
+    #     street_area = 0.0
+    #     # Find out total area of street network
+    #     for edge in edges:
+    #         area = edge.getLength() * len(edge.getLanes())
+    #         street_area += area
+    #         edges_num_vehicles[edge.getID()] = area
+    #
+    #     # Define how many vehicles to spawn in total
+    #     num_vehicles = int(round(street_area / traffic_spread))
+    #     for edge in edges:
+    #         if edge.getID() in exclude_edgeIDs:
+    #             continue
+    #         edges_num_vehicles[edge.getID()] = int(
+    #             round(edges_num_vehicles[edge.getID()] / street_area * num_vehicles)
+    #         )
+    #
+    #     # We have to remove those. These are edges part of a merge/split.
+    #     # TODO: refactor
+    #     if self.world.config.simulation.init_ego_strategy != "roundabout":
+    #         edgeIDs_goal = [int(edgeID) for edgeID in edgeIDs if "#" not in edgeID]
+    #     else:
+    #         edgeIDs_goal = edgeIDs
+    #
+    #     for edgeID, num in edges_num_vehicles.items():
+    #         if edgeID in exclude_edgeIDs:
+    #             continue
+    #
+    #         target_edge = self._calc_target_edge(
+    #             edgeID,
+    #             edgeIDs_goal,
+    #             self.world.config.simulation.init_traffic_goal_strategy,
+    #         )
+    #
+    #         for i in range(num):
+    #             routeID = f"route_trafficInit_{edgeID}_{i}"
+    #             vehID = f"trafficInit_{edgeID}_{i}"
+    #             route_edges = [edgeID]
+    #             if (
+    #                     target_edge
+    #             ):  # If None, we only drive the current edge from start to finish
+    #                 route_edges += [target_edge]
+    #             self.world.traci.route.add(routeID, route_edges)
+    #
+    #             typeID = "DEFAULT_VEHTYPE" if not self.world.config.variation.traffic_vTypes else f"vehDist{self.world.traffic_seed_sampler.randint(0, self.world.config.variation.vTypeDistribution_num)}"
+    #             self.world.traci.vehicle.add(
+    #                 vehID,
+    #                 routeID,
+    #                 typeID=typeID,
+    #                 departPos="random_free",
+    #                 departLane="best",
+    #                 departSpeed="random",
+    #             )
+    #
+    #             logging.debug(
+    #                 f"Traffic init: {vehID} on edge {edgeID} towards {route_edges[-1]}."
+    #             )
+    #
+    # def _init_ego(self):
+    #     egoID = self.world.config.simulation.egoID
+    #     routeID = self.world.config.simulation.routeID
+    #     start_edgeID = self.world.config.simulation.init_ego_start_edge
+    #     goal_edgeID = self.world.config.simulation.init_ego_goal_edge
+    #
+    #     start_edge = self.world.net.getEdge(start_edgeID)
+    #     if goal_edgeID != "":
+    #         if '*' in goal_edgeID:
+    #             # TODO: Dirty
+    #             import random
+    #             candidates = [x for x in self.world.net.getEdges() if 'out' in x.getID() and x.getID() != 'out0']
+    #             goal_edgeID = random.choice(candidates).getID()
+    #
+    #         goal_edge = self.world.net.getEdge(goal_edgeID)
+    #         route_edges = [
+    #             edge.getID()
+    #             for edge in self.world.net.getOptimalPath(start_edge, goal_edge)[0]
+    #         ]
+    #         self.world.route_edges = [
+    #             edge.getID()
+    #             for edge in self.world.net.getOptimalPath(
+    #                 start_edge, goal_edge, withInternal=True
+    #             )[0]
+    #         ]
+    #     else:
+    #         route_edges = [start_edgeID]
+    #         self.world.route_edges = [start_edgeID]
+    #
+    #     departPos = (
+    #         self.world.config.vehicle.start_offset
+    #         if self.world.config.vehicle.start_offset
+    #         else "free"
+    #     )
+    #     departSpeed = (
+    #         self.world.config.vehicle.start_velocity
+    #         if self.world.config.vehicle.start_velocity
+    #         else "random"
+    #     )
+    #     departLane = (
+    #         self.world.config.vehicle.start_lane_offset
+    #         if self.world.config.vehicle.start_lane_offset
+    #         else "free"
+    #     )
+    #
+    #     self.world.traci.route.add(routeID, route_edges)
+    #     self.world.traci.vehicle.add(
+    #         egoID,
+    #         routeID,
+    #         departPos=departPos,
+    #         departLane=departLane,
+    #         departSpeed=departSpeed,
+    #     )
+    #     steps = 1
+    #     while True:
+    #         self.world.sumo_engine.simulationStep()
+    #         if traci.vehicle.getRoadID(self.world.config.simulation.egoID) == "":
+    #             steps += 1
+    #             continue
+    #         break
+    #
+    #     logging.debug(
+    #         f"Ego init: {egoID} on edge {start_edgeID} towards {route_edges[-1]} edge after {steps} step(s)."
+    #     )
+    #
+    # def _insert_traffic(self):
+    #     period = self.world.config.variation.traffic_routing_period / self._traffic_density_episode
+    #     start_edges = self.world.config.variation.traffic_routing_start_edges
+    #     goal_strat = self.world.config.variation.traffic_routing_goal_strategy
+    #
+    #     edges = [
+    #         edge
+    #         for edge in self.world.net.getEdges(withInternal=False)
+    #         if edge.getLength() > 1.0
+    #     ]
+    #     edgeIDs = [edge.getID() for edge in edges]
+    #
+    #     if self.world.config.simulation.init_ego_strategy != "roundabout":
+    #         edgeIDs_goal = [int(edgeID) for edgeID in edgeIDs if "#" not in edgeID]
+    #     else:
+    #         edgeIDs_goal = edgeIDs
+    #
+    #     num_inserts = int(self._time_since_last_insert // period)
+    #     if num_inserts > 0:
+    #         self._time_since_last_insert = self._time_since_last_insert % period
+    #         for i in range(num_inserts):
+    #             if goal_strat == "intersection" and start_edges is None:
+    #                 start_edge = self.world.traffic_seed_sampler.choice(
+    #                     [str(edge) for edge in range(max(edgeIDs_goal))]
+    #                 )
+    #             elif goal_strat == "roundabout" and start_edges is None:
+    #                 start_edge = self.world.traffic_seed_sampler.choice(
+    #                     [id for id in edgeIDs_goal if "in" in id]
+    #                 )
+    #             else:
+    #                 start_edge = self.world.traffic_seed_sampler.choice(start_edges)
+    #
+    #             target_edge = self._calc_target_edge(
+    #                 start_edge, edgeIDs_goal, goal_strat
+    #             )
+    #             route_edges = [start_edge]
+    #             if (
+    #                     target_edge
+    #             ):  # If None, we only drive the current edge from start to finish
+    #                 route_edges += [target_edge]
+    #
+    #             routeID = f"route_trafficRunning_{self.world.time_step}_{i}"
+    #             vehID = f"trafficRunning_{self.world.time_step}_{i}"
+    #             self.world.traci.route.add(routeID, route_edges)
+    #
+    #             self.world.traci.vehicle.add(
+    #                 vehID,
+    #                 routeID,
+    #                 departPos="base",
+    #                 departLane="free",
+    #                 departSpeed="random",
+    #             )
+    #
+    #             logging.debug(
+    #                 f"Traffic spawn: {vehID} on edge {start_edge} towards {route_edges[-1]} edge."
+    #             )
+    #     else:
+    #         self._time_since_last_insert += self.world.config.simulation.dt

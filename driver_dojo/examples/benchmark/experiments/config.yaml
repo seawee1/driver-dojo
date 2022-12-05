@@ -1,8 +1,0 @@
-defaults:
-  - algo: dqn_numeric
-  - env_train: default
-  - env_test: default
-  - obs: default
-  - _self_
-
-env_name: "DriverDojo/Sem-TPS-Intersection-v0"

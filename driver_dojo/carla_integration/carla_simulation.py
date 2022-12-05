@@ -28,7 +28,7 @@ class CarlaSimulation(object):
     """
     def __init__(self, host, port, step_length):
         self.client = carla.Client(host, port)
-        self.client.set_timeout(30.0)
+        self.client.set_timeout(2.0)
 
         self.world = self.client.get_world()
         self.blueprint_library = self.world.get_blueprint_library()

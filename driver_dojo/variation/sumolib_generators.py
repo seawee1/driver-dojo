@@ -1,7 +1,7 @@
 import numpy as np
 import sumolib
 from sumolib.net.generator.network import *
-from driver_dojo.common import runtime_vars
+import driver_dojo.core.world as world
 from pyclothoids import Clothoid
 
 
@@ -14,7 +14,7 @@ def build(net, netName="net.net.xml"):
         n = net._nodes[nid]
         print(
             '    <node id="%s" x="%s" y="%s" type="%s"/>'
-            % (n.nid, n.x, n.y, n.nodeType),
+            % (n.nid, n._x, n._y, n.nodeType),
             file=nodesFile,
         )
     print("</nodes>", file=nodesFile)
@@ -149,6 +149,9 @@ def build_edge(e_id, n1, n2, numLanes, lanes, maxSpeed=13.333):
 
 
 def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, road_cs, lengths, squeeze):
+
+    # TODO: spread type center!!!!
+    # https://sumo.dlr.de/docs/Networks/PlainXML.html
     defaultEdge = Edge(numLanes=2, maxSpeed=13.0)
     net = Net(None, defaultEdge)
 
@@ -167,11 +170,11 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         rads = np.linspace(rad_a, rad_a + rad_amount, endpoint=True, num=num)
         xs, ys = [], []
         for rad in rads:
-            x = radius * np.cos(rad) #+ runtime_vars.np_random_maps.normal(
+            x = radius * np.cos(rad) #+ world.world.np_random_maps.normal(
                 #0.0, perturb_std
             #)
             x *= squeeze[0]
-            y = radius * np.sin(rad) #+ runtime_vars.np_random_maps.normal(
+            y = radius * np.sin(rad) #+ world.world.np_random_maps.normal(
                 #0.0, perturb_std
             #)
             y *= squeeze[1]
@@ -247,32 +250,32 @@ def create_roundabout(radius, num_lanes, internal_lanes, rads_incident, angles, 
         e.shapes = " ".join(e.shapes)
         net.addEdge(e)
 
-    build(net, netName=runtime_vars.config.simulation.net_path)
+    build(net, netName=world.world.config.simulation.net_path)
 
 
 class RoundaboutSample:
     def __init__(self):
-        self.num_incident = runtime_vars.np_random_maps.randint(3, 6)
-        self.radius = runtime_vars.np_random_maps.uniform(10.0, 30.0)  # TODO: This and next changed
+        self.num_incident = world.world.rng_road_network.randint(3, 6)
+        self.radius = world.world.rng_road_network.uniform(10.0, 30.0)  # TODO: This and next changed
         self.radius = max(self.num_incident*11.0, self.radius)
         self.num_lanes = [
             [
-                runtime_vars.np_random_maps.randint(1, 3),
-                runtime_vars.np_random_maps.randint(1, 3),
+                world.world.rng_road_network.randint(1, 3),
+                world.world.rng_road_network.randint(1, 3),
             ]
             for _ in range(self.num_incident)
         ]
         angle_mean = 0.0
         angle_std = 0.0 #0.15  # TODO: This changed
         self.angles = [
-            runtime_vars.np_random_maps.normal(angle_mean, angle_std)
+            world.world.rng_road_network.normal(angle_mean, angle_std)
             for i in range(self.num_incident)
         ]
         incident_std = 0.15  # This changed
         def draw_rads():
             rads_incident = [
                 i * 2 * np.pi / self.num_incident
-                + runtime_vars.np_random_maps.normal(0.0, incident_std)
+                + world.world.rng_road_network.normal(0.0, incident_std)
                 for i in range(self.num_incident)
             ]
             return rads_incident
@@ -289,12 +292,12 @@ class RoundaboutSample:
             if check_rads(self.rads_incident):
                 break
 
-        self.internal_lanes = runtime_vars.np_random_maps.randint(1, 3)
+        self.internal_lanes = world.world.rng_road_network.randint(1, 3)
         self.lengths = [
-            runtime_vars.np_random_maps.randint(70, 120) for i in range(self.num_incident)
+            world.world.rng_road_network.randint(70, 120) for i in range(self.num_incident)
         ]
         self.squeeze = [
-            runtime_vars.np_random_maps.uniform(0.8, 1.2), # This changed
-            runtime_vars.np_random_maps.uniform(0.8, 1.2),
+            world.world.rng_road_network.uniform(0.8, 1.2), # This changed
+            world.world.rng_road_network.uniform(0.8, 1.2),
         ]
-        self.road_cs = [runtime_vars.np_random_maps.uniform(-0.0003, 0.0003) for i in range(self.num_incident)]
+        self.road_cs = [world.world.rng_road_network.uniform(-0.0003, 0.0003) for i in range(self.num_incident)]

@@ -208,31 +208,3 @@ def plot_polygon(img, size_meters, ppm, poly):
 
 def rgb2gray(rgb):
     return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
-
-
-def normalize_observations(obs, low, high, config_norm_obs):
-    if config_norm_obs is None:
-        return obs
-    if config_norm_obs == FeatureScaling.Standardize:
-        obs = (obs - low) / (high - low)
-        obs = 2.0 * obs - 1.0
-    elif config_norm_obs == FeatureScaling.Normalize:
-        obs = (obs - low) / high - low
-
-    if isinstance(obs, list):
-        obs = np.array(obs)
-    return obs
-
-
-def create_observation_space(low, high, config_norm_obs, dtype=np.float64):
-    if config_norm_obs == FeatureScaling.Standardize:
-        observation_space = gym.spaces.Box(
-            low=np.ones_like(low) * -1.0, high=np.ones_like(low) * 1.0, dtype=np.float64
-        )
-    elif config_norm_obs == FeatureScaling.Normalize:
-        observation_space = gym.spaces.Box(
-            low=np.ones_like(low) * 0.0, high=np.ones_like(low) * -1.0, dtype=np.float64
-        )
-    else:
-        observation_space = gym.spaces.Box(low=low, high=high, dtype=dtype)
-    return observation_space

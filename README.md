@@ -20,20 +20,20 @@ The key features of Driver Dojo are:
 Something for the eye.
 ### Core Randomized Scenarios
 Have a look into [this folder](media/showcase-videos/) for more videos.
-#### Sem-TPS-Intersection-v0 
-![Sem-TPS-Intersection-v0](media/showcase-videos/intersection-showcase.gif)
-#### Sem-TPS-Roundabout-v0 
-![Sem-TPS-Intersection-v0](media/showcase-videos/roundabout-showcase.gif)
-#### Sem-TPS-HighwayEntry-v0 
-![Sem-TPS-Intersection-v0](media/showcase-videos/highwayentry-showcase.gif)
+#### Sem-God-Intersection-v0 
+![Sem-God-Intersection-v0](media/showcase-videos/intersection-showcase.gif)
+#### Sem-God-Roundabout-v0 
+![Sem-God-Intersection-v0](media/showcase-videos/roundabout-showcase.gif)
+#### Sem-God-HighwayEntry-v0 
+![Sem-God-Intersection-v0](media/showcase-videos/highwayentry-showcase.gif)
 
 ### Custom Scenarios
-#### Sem-TPS-Urban_Intersection-v0
+#### Sem-God-Urban_Intersection-v0
 This scenario was built just using SUMO's netedit tool.
-![Sem-TPS-Intersection-v0](media/showcase-videos/urbanintersection-showcase.gif)
-#### Sem-TPS-FraunhoferNOP-v0
+![Sem-God-Intersection-v0](media/showcase-videos/urbanintersection-showcase.gif)
+#### Sem-God-FraunhoferNOP-v0
 Here, we imported an area around our Fraunhofer institute in Nuremberg from OSM using SUMO's tooling scripts and added custom traffic definitions using netedit.
-![Sem-TPS-Intersection-v0](media/showcase-videos/fraunhofernop-showcase.gif)
+![Sem-God-Intersection-v0](media/showcase-videos/fraunhofernop-showcase.gif)
 ## Setup
 Installing Driver Dojo and its requirements is very easy and does not require any source compilation whatsoever. 
 
@@ -90,7 +90,7 @@ env = gym.make("DriverDojo/PlaceEnvNameHere-v0")
 obs = env.reset()
 ...
 ```
-Generally, environment names are structured as ```DriverDojo/{Action Space}-{Vehicle Model}-{Scenario}-v0```, e.g. ```DriverDojo/Sem-TPS-Intersection-v0``` or ```DriverDojo/Disc-KS-Roundabout-v0```.
+Generally, environment names are structured as ```DriverDojo/{Action Space}-{Vehicle Model}-{Scenario}-v0```, e.g. ```DriverDojo/Sem-God-Intersection-v0``` or ```DriverDojo/Disc-KS-Roundabout-v0```.
 
 You can pass custom configurations through a config dict, for example: 
 ```python
@@ -111,7 +111,7 @@ env = gym.make("DriverDojo/PlaceEnvNameHere-v0", config=config)
 ### Running the Benchmark Code
 We use Tianshou and Hydra for our benchmark code base. Run:
 ```bash
-python -m driver_dojo.examples.benchmark hydra.job.chdir=True algo=ppo_numeric obs=default env="DriverDojo/Sem-TPS-Intersection-v0"
+python -m driver_dojo.examples.benchmark hydra.job.chdir=True algo=ppo_numeric obs=default env="DriverDojo/Sem-God-Intersection-v0"
 ```
 to train PPO on the intersection environment. This will create a subfolder inside ```output``` in which Tensorboard logs and model checkpoints will be placed.
 Similarly, as shown above, this allows us to overwrite every configurable parameter from the outside, e.g. ```++env_train.simulation.dt=0.05``` will change the simulation time resolution of the training environment to 50ms.

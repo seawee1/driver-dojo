@@ -1,1 +1,0 @@
-# TODO: TrafficLight observer

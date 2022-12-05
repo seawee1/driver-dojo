@@ -43,7 +43,7 @@ class DynamicsModel(Enum):
     ST = "ST"
     STD = "STD"
     MB = "MB"
-    TPS = "TPS"
+    God = "God"
 
 
 class CarModel(Enum):

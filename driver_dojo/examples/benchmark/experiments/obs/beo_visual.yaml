@@ -1,3 +1,0 @@
-observations:
-  observers: ["BirdsEye"]
-  num_frame_stack: 5

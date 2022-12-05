@@ -6,26 +6,30 @@ setup(
     version="0.1.0",
     python_requires=">=3.8",
     install_requires=[
-        "gym==0.21.0",
-        "eclipse-sumo==1.14.1",  # Better to install it manually as we encountered some problems with pip installations.
+        "gym",
+        #"eclipse-sumo==1.15.0",  # Better to install it manually as we encountered some problems with pip installations.
         "traci==1.14.1",
         "sumolib==1.14.1",
         "matplotlib",
         "scikit-image",
         "shapely==1.8.1.post1",
         "pyyaml",
-        "numpy==1.21.0",
         "scipy",
         "rtree",
         "pyclothoids==0.1.4",
         "scenariogeneration",
         "psutil",
         "omegaconf",
-        "ffmpeg-python"
+        "ffmpeg-python",
+        "carla",
+        "lxml",
+        "visdom",
+        "commonroad-vehicle-models",
+        "moviepy"
     ],
     extras_require={
         "benchmark": [
-            "tianshou==0.4.8",
+            "tianshou",
             "hydra-core",
             "torch",
             "torchvision",

@@ -1,4 +1,0 @@
-# We don't override anything
-observations:
-  observers: ["EgoVehicle", "SubGoals", "CarlaCamera"]
-  num_frame_stack: 5
