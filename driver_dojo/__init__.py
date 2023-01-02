@@ -21,33 +21,31 @@ from driver_dojo.core.types import *
 ###############################
 ### Environment Definitions ###
 ###############################
-DIRECT_DYN_MODEL = DynamicsModel.KS
-
 cont_config = dict(
     actions=dict(space=ActionSpace.Continuous),
-    vehicle=dict(dynamics_model=DIRECT_DYN_MODEL),
+    vehicle=dict(dynamics_model=DynamicsModel.KS),
 )
 disc_config = dict(
     actions=dict(space=ActionSpace.Discretized),
-    vehicle=dict(dynamics_model=DIRECT_DYN_MODEL),
-)
-sem_d_config = dict(
-    actions=dict(space=ActionSpace.Semantic),
-    vehicle=dict(dynamics_model=DIRECT_DYN_MODEL),
+    vehicle=dict(dynamics_model=DynamicsModel.KS),
 )
 sem_config = dict(
+    actions=dict(space=ActionSpace.Semantic),
+    vehicle=dict(dynamics_model=DynamicsModel.KS),
+)
+sem_god_config = dict(
     actions=dict(space=ActionSpace.Semantic),
     vehicle=dict(dynamics_model=DynamicsModel.God),
 )
 
 for action_name, base_config, veh_model in [
-    ("Cont", cont_config, DIRECT_DYN_MODEL.value),
-    ("Disc", disc_config, DIRECT_DYN_MODEL.value),
-    ("Sem", sem_d_config, DIRECT_DYN_MODEL.value),
-    ("Sem", sem_config, DynamicsModel.God.value),
+    ("Cont", cont_config, DynamicsModel.KS.value),
+    ("Disc", disc_config, DynamicsModel.KS.value),
+    ("Sem", sem_config, DynamicsModel.KS.value),
+    ("Sem", sem_god_config, DynamicsModel.God.value),
 ]:
     #####################################
-    ### Random road network scenarios ###
+    ### Radomized road network scenarios ###
     #####################################
 
     ####################
@@ -63,17 +61,19 @@ for action_name, base_config, veh_model in [
     config.scenario.traffic_init_spread = 30.0
     config.scenario.traffic_spawn = True
     config.scenario.traffic_spawn_period = 1.0
-    config.scenario.vType_rnd = False
     config.scenario.ego_init = True
+    config.scenario.name = 'Intersection'
     config.vehicle.v_max = SpeedClass.Urban.value
-    for scenario_name in ['Intersection_S_RBL', 'Intersection_S_Major', 'Intersection_S_Minor']:
-        config.scenario.name = scenario_name
+    for crossing_style in ['RBL', 'Major', 'Minor']:
+        config.scenario.kwargs['crossing_style'] = crossing_style
+        config.scenario.tasks = ['L']
         env_config = OmegaConf.merge(config, base_config)
         register(
-            id=f"DriverDojo/{action_name}-{veh_model}-{scenario_name}-v0",
+            id=f"DriverDojo/{action_name}-{veh_model}-{config.scenario.name}_{crossing_style}_{''.join(config.scenario.tasks)}-v0",
             entry_point=f"driver_dojo.core.env:DriverDojoEnv",
             kwargs=dict(_config=env_config),
         )
+
     # for seed_name, num_road, num_traf in seeding:
     #     config.scenario.num_road_scenarios = num_road
     #     config.scenario.num_traffic_scenarios = num_traf

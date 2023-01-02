@@ -5,55 +5,52 @@ from pyclothoids import Clothoid
 
 from driver_dojo.scenarios.basic_scenarios import BasicScenario
 from driver_dojo.scenarios.plainxml import Edge, Node, Connection, write_plain_xml
+from driver_dojo.core.config import Config
+import sumolib
 
 
 class IntersectionScenario(BasicScenario):
     def __init__(
             self,
-            config,
+            base_path,
+            scenario_config,
+            sim_config,
             net_seed,
             traffic_seed,
-            sumocfg_path,
-            sumo_net_path,
-            sumo_route_path,
-            sumo_add_path,
-            sumo_vType_path,
-            xodr_path,
-            scenario_name,
+            task_seed,
     ):
-        self._intersection_size = scenario_name.split('_')[1].lower()
-        assert self._intersection_size in ['s', 'l']
-        self._intersection_type = scenario_name.split('_')[2].lower()
-        assert self._intersection_type in ['major', 'minor', 'rbl']
 
-        if self._intersection_type == 'major':
-            self._target_conn_state = 'M'
-        elif self._intersection_type == 'minor':
-            self._target_conn_state = 'm'
-        else:
-            self._target_conn_state = None
+        self._crossing_style = scenario_config.kwargs['crossing_style'].lower()
+        assert self._crossing_style in ['major', 'minor', 'rbl']
+        self._crossing_style_to_conn_state = {  # Defines the SUMO connection state (conn.getState()) that should be part of the ego route
+            'major': 'M',
+            'minor': 'm',
+            'rbl': None,
+        }
 
-        self._node_name: str = 'main'
+        self._is_valid = True
+        self._node_name: str = 'main'  # TODO: make this more generic
         self._shape_step: float = 1.0
         self._nodes: Dict[str, Node] = {}
         self._edges: Dict[str, Edge] = {}
-        self._xml_base_path: str = sumo_net_path[:-8]  # Drop the '.net.xml' file ending
+        self._route_candidates = []
 
         super().__init__(
-            config,
+            base_path,
+            scenario_config,
+            sim_config,
             net_seed,
             traffic_seed,
-            sumocfg_path,
-            sumo_net_path,
-            sumo_route_path,
-            sumo_add_path,
-            sumo_vType_path,
-            xodr_path,
-            scenario_name,
+            task_seed,
         )
+        assert self._task is not None  # We need this for Intersection
 
     @property
-    def _valid_connections(self):
+    def is_valid(self):
+        return self._is_valid
+
+    @property
+    def _junction_connections(self):
         conns = []
         for conn in self.sumo_net.getNode(self._node_name).getConnections():  # Get all junction connections
             if conn.getFrom().getFunction() != 'internal' and conn.getTo().getFunction() != 'internal':
@@ -62,27 +59,66 @@ class IntersectionScenario(BasicScenario):
 
     @property
     def ego_init_edges(self):
-        ego_init_edges = []
-        for conn in self._valid_connections:  # Get all junction connections
-            if self._target_conn_state is None or conn.getState() == self._target_conn_state:
-                ego_init_edges.append(conn.getFrom().getID())
-        assert len(ego_init_edges) > 0, f'{self.net_seed}, {self.traffic_seed}'
-        return ego_init_edges
+        return [x for x, y in self._route_candidates]
+        # ego_init_edges = []
+        # required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
+        # for conn in self._junction_connections:  # Get all junction connections
+        #     if required_conn_state is None or conn.getState() == required_conn_state:
+        #         ego_init_edges.append(conn.getFrom().getID())
+        # assert len(ego_init_edges) > 0, f'{self.net_seed}, {self.traffic_seed}'
+        # return ego_init_edges
 
     def ego_routing_strategy(self, from_edge: str) -> List[str]:
-        ego_target_edges = []
-        for conn in self._valid_connections:  # Get all junction connections
-            if conn.getFrom().getID() == from_edge and (conn.getState() == self._target_conn_state or self._target_conn_state is None):
-                ego_target_edges.append(conn.getTo().getID())
+        to_edges = []
+        for x, y in self._route_candidates:
+            if x == from_edge:
+                to_edges.append(y)
+        self._scenario_config.ego_to_edges = to_edges
+        return super().ego_routing_strategy(from_edge)
+        # ego_target_edges = []
+        # required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
+        # for conn in self._junction_connections:  # Get all junction connections
+        #     if conn.getFrom().getID() == from_edge and (conn.getState() == required_conn_state or required_conn_state is None):
+        #         ego_target_edges.append(conn.getTo().getID())
+        #
+        # to_edge = self.traffic_rng.choice(ego_target_edges)
+        # optimal_routes = self.sumo_net.getOptimalPath(self.sumo_net.getEdge(from_edge), self.sumo_net.getEdge(to_edge))
+        # assert optimal_routes[0] is not None  # Otherwise, this route is impossible with the underlying map
+        # route_edge_ids = [x.getID() for x in optimal_routes[0]]
+        # return route_edge_ids
 
-        to_edge = self.traffic_rng.choice(ego_target_edges)
-        route = self.sumo_net.getOptimalPath(self.sumo_net.getEdge(from_edge), self.sumo_net.getEdge(to_edge))
-        assert route[0] is not None
-        return [x.getID() for x in route[0]]
+    def generate_map(self):
+        map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
+        #priorities = self._sample_edge_priorities(self.network_rng, map_params, self._from_edge, self._to_edge)
+        self._generate_map(map_params)  # Generate the map (.net.xml)
 
-    def generate(self):
-        params = self.sample_map_parameters(self.network_rng)
-        self._generate_map(params)
+    def task_specifics(self):
+        map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
+        from_edges, to_edges = self._task_from_to_edges(map_params)  # Sample possible from/to edges, based on task
+        if len(from_edges) == 0:
+            self._is_valid = False
+            return
+        self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+        self._route_candidates = self._filter_route_candidates(self.sumo_net, from_edges, to_edges)
+        if len(self._route_candidates) == 0:
+            self._is_valid = False
+            return
+
+    def _filter_route_candidates(self, sumo_net, from_edges, to_edges):
+        required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
+        route_candidates = []
+        for conn in self._junction_connections:
+            if required_conn_state is None or conn.getState() == required_conn_state:
+                conn_from = int(conn.getFrom().getID().split('_')[0])
+                conn_to = int(conn.getTo().getID().split('_')[0])
+                real = False
+                for from_edge, to_edge in zip(from_edges, to_edges):
+                    if conn_from == from_edge and conn_to == to_edge:
+                        real = True
+                        break
+                if real:
+                    route_candidates.append((conn.getFrom().getID(), conn.getTo().getID()))
+        return route_candidates
 
     def _netconvert_cmd(self, nodes_xml_path, edges_xml_path):
         return [
@@ -104,9 +140,9 @@ class IntersectionScenario(BasicScenario):
         ]
 
     def _generate_map(self, params):
-        n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist, priorities = params
+        n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist = params#, priorities = params
 
-        node_type = 'right_before_left' if self._intersection_type == 'rbl' else 'priority'
+        node_type = 'right_before_left' if self._crossing_style == 'rbl' else 'priority'
         node_pos = [0.0, 0.0]
         main_node = Node(self._node_name, 0.0, 0.0, 0.0, type=node_type, rightOfWay='default')
         self._nodes[self._node_name] = main_node
@@ -122,7 +158,7 @@ class IntersectionScenario(BasicScenario):
 
             if n_lanes_in[i] > 0:
                 shape = cloth.Reverse().SampleXY(num_shape_samples)
-                self._edges[f'{i}_in'] = Edge(f'{i}_in', str(i), self._node_name, numLanes=n_lanes_in[i], shape=shape, priority=priorities[i])
+                self._edges[f'{i}_in'] = Edge(f'{i}_in', str(i), self._node_name, numLanes=n_lanes_in[i], shape=shape)#, priority=priorities[i])
 
             if n_lanes_out[i] > 0:
                 if road_sep[i] > 0.0:
@@ -130,48 +166,34 @@ class IntersectionScenario(BasicScenario):
                     x_off, y_off = np.cos(orth_angle) * road_sep[i], np.sin(orth_angle) * road_sep[i]
                     cloth = cloth.Translate(x_off, y_off)
                 shape = cloth.SampleXY(num_shape_samples)
-                self._edges[f'{i}_out'] = Edge(f'{i}_out', self._node_name, str(i), numLanes=n_lanes_out[i], shape=shape, priority=priorities[i])
+                self._edges[f'{i}_out'] = Edge(f'{i}_out', self._node_name, str(i), numLanes=n_lanes_out[i], shape=shape)#, priority=priorities[i])
 
-        nodes_xml_path, edges_xml_path, conns_xml_path = write_plain_xml(self._xml_base_path, self._nodes.values(), self._edges.values(), conns=None)
+        nodes_xml_path, edges_xml_path, conns_xml_path = write_plain_xml(self._scenario_base_path, self._nodes.values(), self._edges.values(), conns=None)
         p = subprocess.Popen(
             self._netconvert_cmd(nodes_xml_path, edges_xml_path)#, stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
         p.wait()
 
     def sample_map_parameters(self, rng: np.random.Generator):
-        if self._intersection_size == 'l':  # TODO: refactor
-            n_roads = rng.choice([3, 4, 5])
-            n_lanes_in = [rng.choice([0, 1, 2, 3], p=[0.1, 0.3, 0.3, 0.3]) for i in range(n_roads)]
-            n_lanes_out = [rng.choice([0, 1, 2, 3], p=[0.1, 0.3, 0.3, 0.3]) for i in range(n_roads)]
-            for i, (n_in, n_out) in enumerate(zip(n_lanes_in, n_lanes_out)):  # Enfore `n_roads`
-                if n_in == 0 and n_out == 0:
-                    out = bool(rng.integers(0, 2))
-                    if out:
-                        n_lanes_out[i] = rng.choice([1, 2])
-                    else:
-                        n_lanes_in[i] = rng.choice([1, 2])
-            if sum(n_lanes_in) == 0:  # Enforce at least one `in` road and one `out`
-                n_lanes_in[rng.integers(0, n_roads)] = rng.choice([1, 2, 3])
-            if sum(n_lanes_out) == 0:
-                n_lanes_out[rng.integers(0, n_roads)] = rng.choice([1, 2, 3])
-        elif self._intersection_size == 's':
-            n_roads = rng.choice([3, 4])
-            n_lanes_in = [rng.choice([0, 1, 2], p=[0.1, 0.45, 0.45]) for i in range(n_roads)]
-            n_lanes_out = [rng.choice([0, 1, 2], p=[0.1, 0.45, 0.45]) for i in range(n_roads)]
-            for i, (n_in, n_out) in enumerate(zip(n_lanes_in, n_lanes_out)):
-                if n_in == 0 and n_out == 0:
-                    out = bool(rng.integers(0, 2))
-                    if out:
-                        n_lanes_out[i] = rng.choice([1, 2])
-                    else:
-                        n_lanes_in[i] = rng.choice([1, 2])
-            if sum(n_lanes_in) == 0:
-                n_lanes_in[rng.integers(0, n_roads)] = rng.choice([1, 2])
-            if sum(n_lanes_out) == 0:
-                n_lanes_out[rng.integers(0, n_roads)] = rng.choice([1, 2])
-        else:
-            raise ValueError
-        road_sep = [rng.uniform(0.2, 2.0) if rng.uniform(0.0, 1.0) >= 0.5 else 0.0 for i in range(n_roads)]
+        def indices_with_lanes(n_lanes_lst):
+            return [i for i in range(len(n_lanes_lst)) if n_lanes_lst[i] > 0]
+
+        num_lanes_range = [0, 1, 2]
+        num_roads_cand = [3, 4]
+        n_roads = rng.choice(num_roads_cand)
+        n_lanes_in = rng.choice(num_lanes_range, size=n_roads, p=[0.1, 0.45, 0.45])
+        n_lanes_out = rng.choice(num_lanes_range, size=n_roads, p=[0.1, 0.45, 0.45])
+
+        for i, (n_in, n_out) in enumerate(zip(n_lanes_in, n_lanes_out)):  # Repair the case where we have a road with neither inward nor outward lanes
+            if n_in == 0 and n_out == 0:
+                rng.choice([n_lanes_in, n_lanes_out])[i] = rng.choice(num_lanes_range[1:])  # Set either inward or outward lane number to something > 0
+
+        for lst in [n_lanes_in, n_lanes_out]: # Repair the case where less than two roads lead into/out of the junction
+            indices = indices_with_lanes(lst)
+            for _ in range(max(0, 2 - len(indices))):
+                lst[rng.choice(indices)] = rng.choice(num_lanes_range[1:])
+
+        road_sep = [rng.uniform(0.2, 2.0) if rng.uniform(0.0, 1.0) >= 0.5 else 0.0 for i in range(n_roads)]  # Randomized separation between opposing road directions
         angle_var = 0.8 * (365.0 / n_roads / 2)
         road_angles = [
             np.radians(i * 365.0 / n_roads + rng.integers(-angle_var, angle_var)) for i in range(n_roads)
@@ -179,10 +201,58 @@ class IntersectionScenario(BasicScenario):
         t_inner = [rng.uniform(road_angle - np.pi / 16, road_angle + np.pi / 16) for road_angle in road_angles]
         t_outer = [rng.uniform(road_angle - np.pi / 4, road_angle + np.pi / 4) for road_angle in road_angles]
         airline_dist = [rng.integers(50.0, 100.0) for i in range(n_roads)]
+        return n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist
 
-        priorities = np.ones((n_roads,))  # Make two roads higher priority
-        if self._intersection_type != 'rbl':
-            for i in range(2):
-                priorities[rng.choice(np.arange(0, n_roads)[priorities == 1])] = 2
+    def _task_from_to_edges(self, map_params):
+        n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist = map_params
+        def indices_with_lanes(n_lanes_lst):
+            return [i for i in range(len(n_lanes_lst)) if n_lanes_lst[i] > 0]
 
-        return n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist, priorities
+        from_edges = []
+        to_edges = []
+        if self._task == 'l':
+            for i in indices_with_lanes(n_lanes_in):
+                from_edge = i
+                to_edge = i - 1 if i >= 1 else n_roads - 1
+                if n_lanes_out[to_edge] > 0:
+                    from_edges.append(from_edge)
+                    to_edges.append(to_edge)
+        elif self._task == 'r':
+            for i in indices_with_lanes(n_lanes_in):
+                from_edge = i
+                to_edge = i + 1 if i < n_roads - 1 else 0
+                if n_lanes_out[to_edge] > 0:
+                    from_edges.append(from_edge)
+                    to_edges.append(to_edge)
+        elif self._task == 's':  # Find two possible candidate in-out parring that results in a maximally straight crossing
+            from_edge = None
+            to_edges = None
+            best_crossing_angle = 0
+            for i in indices_with_lanes(n_lanes_in):
+                for j in indices_with_lanes(n_lanes_out):
+                    if i == j:
+                        continue
+                    crossing_angle = np.abs(np.radians(180) - wrap_to_pi(road_angles[i] - road_angles[j]))
+                    if crossing_angle < best_crossing_angle:
+                        best_crossing_angle = crossing_angle
+                    from_edge = i
+                    to_edge = j
+
+            if from_edge is not None and to_edge is not None:
+                from_edges = [from_edge]
+                to_edges = [to_edge]
+        else:
+            raise ValueError("'IntersectionScenario' only supports 'r', 'l' or 's' as driving task specifications!")
+
+        return from_edges, to_edges
+
+    #def _sample_route(self):
+
+    # def _sample_edge_priorities(self, rng: np.random.Generator, map_params, from_edge, to_edge):
+    #     n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist = map_params
+    #
+    #     edge_prios = np.ones((n_roads,))
+    #     if self._crossing_style == 'rbl':
+    #         return edge_prios
+    #     elif self._crossing_style == 'minor':
+    #         edge_prios[to_edge] = 2

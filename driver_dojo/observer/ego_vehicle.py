@@ -28,6 +28,7 @@ class EgoVehicleObserver(BaseObserver):
                 veh_config.v_min,
                 veh_config.decel_max,
                 -np.pi,
+                -3.0,
             ],
             dtype=np.float64,
         )
@@ -39,6 +40,7 @@ class EgoVehicleObserver(BaseObserver):
                 veh_config.v_max,
                 veh_config.accel_max,
                 np.pi,
+                3.0
             ],
             dtype=np.float64,
         )
@@ -52,7 +54,8 @@ class EgoVehicleObserver(BaseObserver):
             self._vehicle.steer,
             veh_state.velocity,
             veh_state.accel,
-            utils.wrap_to_pi(veh_state.rotation)[1]
+            utils.wrap_to_pi(veh_state.rotation)[1],
+            veh_state.lane_position_lat
         ]
 
         return self._normalize_obs(obs)

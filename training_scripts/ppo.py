@@ -18,12 +18,15 @@ if __name__ == '__main__':
         config.scenario.traffic_init_spread = 30.0
         config.scenario.traffic_spawn = True
         config.scenario.traffic_spawn_period = 1.0
-        config.scenario.vType_rnd = False
+        config.scenario.behavior_dist = False
         config.scenario.ego_init = True
         config.vehicle.v_max = 13.34
-        config.scenario.name = 'Intersection_S_Major'
-        config.scenario.num_road_scenarios = 1
-        config.scenario.num_traffic_scenarios = 1
+        config.scenario.name = 'Intersection'
+        config.scenario.kwargs['crossing_style'] = 'Minor'
+        config.scenario.tasks = ['L']
+        config.scenario.num_maps = 1
+        config.scenario.num_traffic = 1
+        config.scenario.num_tasks = 1
         env = DriverDojoEnv(_config=config)
         return env
 
@@ -37,6 +40,9 @@ if __name__ == '__main__':
     )
     config = config.framework(
         framework='torch'
+    )
+    config = config.rollouts(
+        num_rollout_workers=15,
     )
     # config = config.rollouts(
     #     num_rollout_workers=15,

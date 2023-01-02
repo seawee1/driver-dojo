@@ -14,11 +14,7 @@ class MultiObserver(BaseObserver):
     """
 
     def __init__(self, *args, config, vehicle, traffic_manager):
-        # TODO: Remove frame stacking
         super().__init__(config, vehicle, traffic_manager)
-        self.frames = None
-        self.num_frame_stack = self.config.observations.num_frame_stack
-
         self.obs_members = {"vector": [], "image": []}
         self.obs_spaces = {"vector": None, "image": None}
         self.multi_observer_type = None
@@ -35,30 +31,21 @@ class MultiObserver(BaseObserver):
         if len(self.obs_members["vector"]) > 0:
             low = np.concatenate(
                 [x.low for x in self.obs_members["vector"]]
-                * self.num_frame_stack
             )
             high = np.concatenate(
                 [x.high for x in self.obs_members["vector"]]
-                * self.num_frame_stack
             )
             self.obs_spaces["vector"] = self._create_observation_space(low, high)
 
         if len(self.obs_members["image"]) > 0:
             low = np.concatenate(
-                [x.low for x in self.obs_members["image"]]
-                * self.num_frame_stack,
+                [x.low for x in self.obs_members["image"]],
                 axis=2,
             )
             high = np.concatenate(
-                [x.high for x in self.obs_members["image"]]
-                * self.num_frame_stack,
+                [x.high for x in self.obs_members["image"]],
                 axis=2,
             )
-
-            if self.config.observations.cwh:
-                low = np.rollaxis(low, 2)
-                high = np.rollaxis(high, 2)
-
             self.obs_spaces["image"] = self._create_observation_space(low, high)
 
         if self.obs_spaces["image"] is None:
@@ -69,78 +56,38 @@ class MultiObserver(BaseObserver):
             self.multi_observer_type = "image"
         else:
             self.observation_space = gym.spaces.Dict(
-                dict(vector=self.obs_spaces["vector"], image=self.obs_spaces["image"])
+                dict(
+                    vector=self.obs_spaces["vector"],
+                    image=self.obs_spaces["image"]
+                )
             )
             self.multi_observer_type = "dict"
 
-        #self.reset()
-
     def reset(self):
-        # Frame-stacking stuff
-        if self.multi_observer_type == "dict":
-            self.frames = {
-                "vector": np.zeros(self.observation_space["vector"].shape),
-                "image": np.zeros(self.observation_space["image"].shape),
-            }
-        else:
-            self.frames = np.zeros(self.observation_space.shape)
-
         for observer in self.obs_members['vector'] + self.obs_members['image']:
             observer.reset()
+        return self._observe('step')
 
     def step(self):
-        def observe_vector(obs, frames):
-            shift = obs.shape[0]
-            frames = np.roll(frames, shift)
-            frames[:shift] = obs  # TODO "setting an array with a sequence"
-            return frames
+        return self._observe('step')
 
-        def observe_image(obs, frames):
-            shift = obs.shape[0]
-            frames = np.roll(frames, shift, axis=0)
-            frames[:shift, :, :] = obs
-            return frames
+    def _observe(self, fn_name):
+        obs_image = None
+        obs_vec = None
+        if self.obs_spaces["image"] is not None:
+            obs_image = np.concatenate([getattr(observer, fn_name)() for observer in self.obs_members["image"]], axis=2)
+        if self.obs_spaces["vector"] is not None:
+            obs_vec = np.concatenate([getattr(observer, fn_name)() for observer in self.obs_members["vector"]])
 
-        if self.multi_observer_type == "vector":
-            self.frames = observe_vector(self._observe(), self.frames)
-        elif self.multi_observer_type == "image":
-            self.frames = observe_image(self._observe(), self.frames)
-        else:
-            obs = self._observe()
-            self.frames["vector"] = observe_vector(obs["vector"], self.frames["vector"])
-            self.frames["image"] = observe_image(obs["image"], self.frames["image"])
-
-        return self.frames
-
-    def _observe(self):
-        if self.obs_spaces["image"] is None:
-            obs = np.concatenate(
-                [observer.step() for observer in self.obs_members["vector"]]
+        if obs_image is not None and obs_vec is not None:
+            return dict(
+                vector=obs_vec,
+                image=obs_image,
             )
-        elif self.obs_spaces["vector"] is None:
-            obs = np.concatenate(
-                [observer.step() for observer in self.obs_members["image"]],
-                axis=2,
-            )
-            if self.config.observations.cwh: obs = np.rollaxis(obs, 2)
+        elif obs_image is not None:
+            return obs_image
         else:
-            obs = {
-                "vector": np.concatenate(
-                    [
-                        observer.step()
-                        for observer in self.obs_members["vector"]
-                    ]
-                ),
-                "image": np.concatenate(
-                    [
-                        observer.step()
-                        for observer in self.obs_members["image"]
-                    ],
-                    2,
-                ),
-            }
-            if self.config.observations.cwh: obs['image'] = np.rollaxis(obs['image'], 2)
-        return obs
+            return obs_vec
 
     def explain(self):
         return  # TODO: Calls for sub-observers

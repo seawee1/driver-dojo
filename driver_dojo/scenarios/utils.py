@@ -138,7 +138,7 @@ def write_sumocfg(sumocfg_path, net_path, rou_path=None):
     ET.SubElement(
         inp, "net-file", value=net_path
     )
-    if rou_path is not None:
+    if rou_path != '':
         rou_path = ntpath.basename(rou_path)
         ET.SubElement(
             inp, "route-files", value=rou_path

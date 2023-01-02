@@ -70,7 +70,7 @@ class SUMOEngine:
         )
         sumo_cmd += (
             ["--additional-files", scenario.sumo_add_path]
-            if scenario.sumo_add_path is not None
+            if scenario.sumo_add_path != ''
             else []
         )
         sumo_cmd += (

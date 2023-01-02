@@ -72,87 +72,98 @@ def parse_route(route_file, route_id, standalone=True):
 class BasicScenario:
     def __init__(
             self,
-            config,
+            base_path,
+            scenario_config,
+            sim_config,
             net_seed,
             traffic_seed,
-            sumocfg_path,
-            sumo_net_path,
-            sumo_route_path,
-            sumo_add_path,
-            sumo_vType_path,
-            xodr_path,
-            scenario_name,
+            task_seed,
     ):
-
-        self.config = config
+        self._base_path = base_path
+        self._sim_config = sim_config
+        self._scenario_config = scenario_config
         self.net_seed: int = net_seed
         self.traffic_seed: int = traffic_seed
-        self.sumocfg_path: str = sumocfg_path
-        self.sumo_net_path: str = sumo_net_path
-        self.sumo_route_path: str = sumo_route_path
-        self._sumo_add_path: str = sumo_add_path  # The following two have to be combined in case both exist
-        self._sumo_vType_path: str = sumo_vType_path
-        self.xodr_path: str = xodr_path
-        self.name = scenario_name
+        self.task_seed: int = task_seed
+
+        self.network_rng = np.random.default_rng(net_seed)
+        self.traffic_rng = np.random.default_rng(traffic_seed)
+        self.task_rng = np.random.default_rng(task_seed)
+
+        self._task = None if len(self._scenario_config.tasks) == 0 else self.task_rng.choice(self._scenario_config.tasks).lower()  # Draw the task
+
+        self.sumocfg_path = self._scenario_base_path + '.sumocfg'
+        self.sumo_net_path = self._scenario_base_path + '.net.xml'
+        self.sumo_route_path = self._scenario_config.route_path  #self._scenario_base_path + '.rou.xml'  # TODO: ScenarioConfig `route_path` and SumoEngine include
+        self.xodr_path = self._scenario_base_path + '.xodr'
+        self._sumo_vType_dist_path = self._scenario_base_path + '.add.xml'
 
         self.time_since_last_spawn = 0  # For BasicScenario.step()
         self.num_spawns = 0
+        self._is_valid = True
 
-        self.network_rng = np.random.default_rng(self.net_seed)  # Initialize RNGs
-        self.traffic_rng = np.random.default_rng(self.traffic_seed)
-
-        if not os.path.isfile(sumo_net_path):  # In case we already generated this map at some point, pass
-            self.generate()
-        if not os.path.isfile(xodr_path):  # TODO: convert function
-            self.convert()
-        if not os.path.isfile(sumocfg_path):
-            write_sumocfg(sumocfg_path, sumo_net_path, sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
-
-        if self.config.scenario.vType_rnd and not os.path.isfile(sumo_vType_path):  # Initialize vType distribution
+        if not os.path.isfile(self.sumo_net_path):  # In case we already generated this map at some point, pass
+            self.generate_map()
+        self.task_specifics()
+        if not self.is_valid:
+            return
+        # if not os.path.isfile(self.xodr_path):  # TODO: convert function
+        #     self.convert()
+        if not os.path.isfile(self.sumocfg_path):
+            write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+        if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
             self.create_vType_distribution()
 
-        traffic_low, traffic_high = self.config.scenario.traffic_scale
+        traffic_low, traffic_high = self._scenario_config.traffic_scale
         self.traffic_scale = self.traffic_rng.uniform(traffic_low, traffic_high)
 
-        self.sumo_net = sumolib.net.readNet(sumo_net_path, withInternal=True)  # Read the network for further processing
+        self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
         self._route_edges = None
+
+    def task_specifics(self):
+        return
 
     @property
     def route(self):
-        if self._route_edges is not None:
-            return self._route_edges
-        elif self.sumo_route_path is not None:
-            self._route_edges = parse_route(self.sumo_route_path, self.config.simulation.egoID)
+        if self.sumo_route_path != '':
+            self._route_edges = parse_route(self.sumo_route_path, self._sim_config.egoID)
         return self._route_edges  # TODO: Might still be None
 
     @property
     def sumo_add_path(self):
-        if self.config.scenario.vType_rnd:
-            if self._sumo_add_path is not None:
-                return f'{self._sumo_add_path},{self._sumo_vType_path}'
-            return self._sumo_vType_path
-        else:
-            return self._sumo_add_path
+        if self._scenario_config.behavior_dist:
+            return self._scenario_config.add_path + ',' + self._sumo_vType_dist_path
+        return self._scenario_config.add_path
+
+    @property
+    def name(self):
+        # if self._task is not None:
+        #     name += f'_{self._task}_{self.task_seed}'
+        return f"{self._scenario_config.name.lower()}_{self.net_seed}_{self.traffic_seed}"
+
+    @property
+    def _scenario_base_path(self):
+        return os.path.join(self._base_path, self.name)
 
     def initialize(self, traci):
         """Code that is run once the scenario is loaded into the SUMO engine.
         Use this to do traffic and ego spawning/routing in case this is not defined over a .rou.xml file.
         """
         ego_from_edge_id = ''
-        if self.config.scenario.ego_init:
+        if self._scenario_config.ego_init:
             ego_from_edge_id = self.init_ego(traci)
 
-        if self.config.scenario.traffic_init:
-            spread = self.config.scenario.traffic_init_spread * self.traffic_scale
-            excludes_extra = [ego_from_edge_id] if self.config.scenario.traffic_init_edges_exclude_ego else None
+        if self._scenario_config.traffic_init:
+            spread = self._scenario_config.traffic_init_spread * self.traffic_scale
+            excludes_extra = [ego_from_edge_id] if self._scenario_config.traffic_init_edges_exclude_ego else None
             self.init_traffic(spread, traci, excludes_extra=excludes_extra)
 
     def step(self, traci):
         """Code that is run every environment step.
         Use this to do traffic spawning/routing in case this is not defined over a .rou.xml file.
         """
-        if self.config.scenario.traffic_spawn:
-            spawn_period = self.config.scenario.traffic_spawn_period * (1.0 / self.traffic_scale)
+        if self._scenario_config.traffic_spawn:
+            spawn_period = self._scenario_config.traffic_spawn_period * (1.0 / self.traffic_scale)
             num_spawn = int(self.time_since_last_spawn // spawn_period)
             if num_spawn > 0:
                 self.time_since_last_spawn -= num_spawn * spawn_period
@@ -161,25 +172,23 @@ class BasicScenario:
                     route_id = f'traffic_spawn_route_{self.num_spawns}'
                     self.spawn_traffic(veh_id, route_id, traci)
                     self.num_spawns += 1
-            self.time_since_last_spawn += self.config.simulation.dt
+            self.time_since_last_spawn += self._sim_config.dt
 
     def create_vType_distribution(self):
         vType_command = [
             "python",
-            self.config.scenario.vType_rnd_path,
-            self.config.scenario.vType_rnd_config_path,
+            self._scenario_config.vTypeDistribution_py_path,
+            self._scenario_config.behavior_dist_path,
             "--output",
-            self.sumo_add_path,
+            self._sumo_vType_dist_path,
             "--name",
             "vehDist",
             "--seed",
             str(self.traffic_seed),
             "--size",
-            str(self.config.scenario.vType_rnd_num),
+            str(self._scenario_config.behavior_dist_num),
         ]
-        p = subprocess.Popen(
-            vType_command, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-        )
+        p = subprocess.Popen(vType_command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         p.wait()
 
     def init_traffic(self, spread, traci, excludes_extra=None):
@@ -192,7 +201,7 @@ class BasicScenario:
 
         cnt = 0
         traffic_vTypes = self.traffic_veh_types
-        depart_pos, depart_lane, depart_speed = self.config.scenario.traffic_init_params
+        depart_pos, depart_lane, depart_speed = self._scenario_config.traffic_init_params
         for edge_id, num in zip(init_edges, num_per_edge):
             for i in range(num):
                 veh_id = f'traffic_init_{cnt}'
@@ -203,15 +212,15 @@ class BasicScenario:
                 cnt += 1
 
     def init_ego(self, traci):
-        veh_id = self.config.simulation.egoID
-        route_id = self.config.simulation.routeID
+        veh_id = self._sim_config.egoID
+        route_id = self._sim_config.routeID
         from_edge_id = self.traffic_rng.choice(self.ego_init_edges)
         route_edge_ids = self.ego_routing_strategy(from_edge_id)
         self._route_edges = route_edge_ids
         type_id = self.ego_veh_type
-        depart_pos = self.config.scenario.ego_init_position
-        depart_lane = self.config.scenario.ego_init_lane
-        depart_speed = self.config.scenario.ego_init_speed
+        depart_pos = self._scenario_config.ego_init_position
+        depart_lane = self._scenario_config.ego_init_lane
+        depart_speed = self._scenario_config.ego_init_speed
         add_vehicle(traci, veh_id, route_id, route_edge_ids, type_id, depart_pos, depart_lane, depart_speed)
         return from_edge_id
 
@@ -219,25 +228,25 @@ class BasicScenario:
         edge_id = self.traffic_rng.choice(self.traffic_spawn_edges)
         route_edge_ids = self.traffic_routing_strategy(edge_id)
         type_id = self.traffic_rng.choice(self.traffic_veh_types)
-        depart_pos, depart_lane, depart_speed = self.config.scenario.traffic_spawn_params
+        depart_pos, depart_lane, depart_speed = self._scenario_config.traffic_spawn_params
         add_vehicle(traci, veh_id, route_id, route_edge_ids, type_id, depart_pos, depart_lane, depart_speed)
 
     @property
     def traffic_veh_types(self):
         """The vType of traffic participants. Will be `DEFAULT_VEHTYPE` in the default case."""
-        if self.config.scenario.vType_rnd:
-            vTypes = [f'vehDist{i}' for i in range(0, self.config.scenario.vType_rnd_num)]
-        elif self.config.scenario.traffic_vTypes is not None:
-            vTypes = self.config.scenario.traffic_vTypes
+        if self._scenario_config.behavior_dist:
+            vTypes = [f'vehDist{i}' for i in range(0, self._scenario_config.behavior_dist_num)]
+        elif self._scenario_config.traffic_vTypes is not None:
+            vTypes = self._scenario_config.traffic_vTypes
         else:
             vTypes = ['DEFAULT_VEHTYPE']
         return vTypes
 
     @property
     def ego_veh_type(self):
-        return self.config.scenario.ego_vType if self.config.scenario.ego_vType is not None else 'DEFAULT_VEHTYPE'
+        return self._scenario_config.ego_vType if self._scenario_config.ego_vType is not None else 'DEFAULT_VEHTYPE'
 
-    def traffic_routing_strategy(self, from_edge) -> List[str]:
+    def traffic_routing_strategy(self, from_edge, rng=None) -> List[str]:
         """Given the starting `edge_id`, will return the edge id traffic should be routed towards.
         By default, will return a random outgoing edge that is reachable starting from given `from_edge_id`.
         """
@@ -249,31 +258,34 @@ class BasicScenario:
             if route[0] is not None:
                 possible_routes.append([x.getID() for x in route[0]])
 
-        return self.traffic_rng.choice(possible_routes)
+        if rng is None:
+            return self.traffic_rng.choice(possible_routes)
+        else:
+            return rng.choice(possible_routes)
 
     def ego_routing_strategy(self, from_edge) -> List[str]:
-        """Given the starting `edge_id`, will return the edge id ego should be routed towards.
+        """Given the starting `edge_id`, will return the edge id the ego should be routed towards.
         By default, same as for traffic or as specified inside config tuple.
         """
-        if self.config.scenario.ego_to_edges is not None:
+        if self._scenario_config.ego_to_edges is not None:
             possible_routes = []
-            for edge_id in self.config.scenario.ego_to_edges:
+            for edge_id in self._scenario_config.ego_to_edges:
                 route = self.sumo_net.getOptimalPath(self.sumo_net.getEdge(from_edge), self.sumo_net.getEdge(edge_id))
                 if route[0] is not None:
                     possible_routes.append([x.getID() for x in route[0]])
             if len(possible_routes) == 0:
                 raise ValueError("The ego route specification is not realisable!")
-            return self.traffic_rng.choice(possible_routes)
+            return self.task_rng.choice(possible_routes)
 
-        return self.traffic_routing_strategy(from_edge)
+        return self.traffic_routing_strategy(from_edge, self.task_rng)
 
     @property
     def ego_init_edges(self) -> Tuple[str]:
         """Returns a list of edge ids' the ego vehicle will be initialized on.
         By default, will spawn on fringe edges leading into the network, or as specified inside config.
         """
-        if self.config.scenario.ego_from_edges is not None:
-            return tuple(self.config.scenario.ego_from_edges)
+        if self._scenario_config.ego_from_edges is not None:
+            return tuple(self._scenario_config.ego_from_edges)
 
         return tuple(str(y) for y in [x.getID() for x in self.sumo_net.getEdges(withInternal=False) if x.is_fringe() and len(x.getOutgoing()) > 0])
 
@@ -282,10 +294,10 @@ class BasicScenario:
         """Returns a list of edge ids' traffic will be initialized on.
         By default, will spawn on all edges, or as specified inside config.
         """
-        if self.config.scenario.traffic_init_edges is not None:  # config values have higher priority
-            return tuple(self.config.scenario.traffic_init_edges)
+        if self._scenario_config.traffic_init_edges is not None:  # config values have higher priority
+            return tuple(self._scenario_config.traffic_init_edges)
 
-        exclude_edge_ids = self.config.scenario.traffic_init_edges_exclude  # Take random edge excluding specified ones
+        exclude_edge_ids = self._scenario_config.traffic_init_edges_exclude  # Take random edge excluding specified ones
         if exclude_edge_ids is None:
             exclude_edge_ids = []
         return tuple(str(y) for y in [x.getID() for x in self.sumo_net.getEdges(withInternal=False)] if y not in exclude_edge_ids)
@@ -295,15 +307,18 @@ class BasicScenario:
         """Returns a list of edge ids' traffic will be spawned on.
         By default, will spawn on fringe edges leading into the network, or as specified inside config.
         """
-        if self.config.scenario.traffic_spawn_edges is not None:
-            return self.config.traffic_spawn_edges
+        if self._scenario_config.traffic_spawn_edges is not None:
+            return self._scenario_config.traffic_spawn_edges
 
-        exclude_edge_ids = self.config.scenario.traffic_spawn_edges_exclude
+        exclude_edge_ids = self._scenario_config.traffic_spawn_edges_exclude
         if exclude_edge_ids is None:
             exclude_edge_ids = []
         return tuple(str(y) for y in [x.getID() for x in self.sumo_net.getEdges(withInternal=False) if x.is_fringe() and len(x.getOutgoing()) > 0] if y not in exclude_edge_ids)
 
-    def generate(self):
+    def is_valid(self):
+        return self._is_valid
+
+    def generate_map(self):
         return
 
     def convert(self):

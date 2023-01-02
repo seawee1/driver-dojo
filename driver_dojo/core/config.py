@@ -1,9 +1,10 @@
 import os
 import sys
+import numpy as np
 from omegaconf import MISSING
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, List, Dict, Union
-from os. path import realpath, abspath, join, dirname
+from typing import Optional, Tuple, List, Dict, Union, Any
+from os.path import realpath, abspath, join, dirname
 
 from driver_dojo.core.types import (
     CarFollowingModel,
@@ -101,31 +102,34 @@ class RenderingConfig:
 @dataclass
 class ScenarioConfig:
     name: str = 'intersection'
+    kwargs: Dict[str, Any] = field(default_factory=lambda: {})
+    tasks: List[str] = field(default_factory=lambda: [])
+    net_path: str = ''
+    route_path: str = ''
+    add_path: str = ''
     seed_offset: int = 0
-    inverse_seeding: bool = False
-    net_path: Optional[str] = None
-    route_path: Optional[str] = None
-    add_path: Optional[str] = None
-    num_road_scenarios: int = 2147483647
-    num_traffic_scenarios: int = 2147483647
-    vType_rnd: bool = False
-    vType_rnd_num: int = 100
-    vType_rnd_path: str = abspath(
-        join(
-            dirname(__file__),
-            "..",
-            "..",
-            "tools",
-            "createVehTypeDistribution.py",
-        )
-    )
-    vType_rnd_config_path: str = abspath(
+    test_seeding: bool = False
+    num_maps: int = np.iinfo(np.int_).max  # `infinity` (kind of) in the default case
+    num_traffic: int = np.iinfo(np.int_).max
+    num_tasks: int = np.iinfo(np.int_).max
+    behavior_dist: bool = False
+    behavior_dist_num: int = 100
+    behavior_dist_path: str = abspath(
         join(
             dirname(__file__),
             "..",
             "data",
             "vType_distribution",
             "EIDM.txt",
+        )
+    )
+    vTypeDistribution_py_path: str = abspath(
+        join(
+            dirname(__file__),
+            "..",
+            "..",
+            "tools",
+            "createVehTypeDistribution.py",
         )
     )
     ego_init: bool = False
@@ -275,9 +279,7 @@ class ObservationConfig:
         default_factory=lambda: []
     )
     feature_scaling: Optional[FeatureScaling] = FeatureScaling.Standardize
-    cwh: bool = True  # Should image obs be presented in CWH format. Else, WHC.
     relative_to_ego: bool = True  # Compute x, y and angles relative to ego
-    num_frame_stack: int = 2  # Stack observations. 1 => no stacking
     rvo_radius: float = 70.0  # RadiusVehicleObserver
     rvo_num_vehicles: int = 15
     rvo_speed_range: Tuple[float, float] = (0, 19.444)
