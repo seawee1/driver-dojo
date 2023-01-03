@@ -72,7 +72,11 @@ class DriverDojoEnv(gym.Env):
         self.street_map: StreetMap = StreetMap()
         self.traffic_manager: TrafficManager = TrafficManager(self.config)
         self.scenario_manager: ScenarioManager = ScenarioManager(self.config)
-        self.renderer: Renderer = Renderer(self.config, self.traffic_manager, self.street_map)
+
+        self.renderer = None
+        if self.config.rendering.human_mode or (Observer.BirdsEye in self.config.observations.observers) or self.config.simulation.interactive:  # If we need a Renderer
+            self.renderer: Renderer = Renderer(self.config, self.traffic_manager, self.street_map)
+
         self.vehicle: BaseVehicle = self._setup_vehicle()
         observer_setup: Tuple[MultiObserver, List[BaseObserver]] = self._setup_observer()
         self.observer, self.carla_observers = observer_setup
@@ -130,8 +134,9 @@ class DriverDojoEnv(gym.Env):
 
         self.street_map.reset(self.scenario)  # Reload lane-graph and stuff
         self.vehicle.reset()
-        self.renderer.reset(self.traci, self.vehicle, self.scenario)  # Has to be done after RoadManager.reset() due to lane_graph being used for rendering
-        self.renderer.step()
+        if self.renderer is not None:
+            self.renderer.reset(self.traci, self.vehicle, self.scenario)  # Has to be done after RoadManager.reset() due to lane_graph being used for rendering
+            self.renderer.step()
         self.actions.reset()
         self.observer.reset()
 
@@ -171,7 +176,8 @@ class DriverDojoEnv(gym.Env):
             action = self._overwrite_action_with_input(action)
 
         self._action_loop(action)  # Perform the action
-        im = self.renderer.step()
+        if self.renderer is not None:
+            self.renderer.step()
 
         if self.config.debug.debug:
             self._debug_routine()
@@ -183,6 +189,11 @@ class DriverDojoEnv(gym.Env):
         return obs, reward, done, info
 
     def render(self, mode="rgb_array"):
+        if self.renderer is None:
+            self.renderer: Renderer = Renderer(self.config, self.traffic_manager, self.street_map)
+            self.renderer.reset(self.traci, self.vehicle, self.scenario)
+            self.renderer.step()
+
         if mode == 'human':
             self.renderer.visible = True
         elif mode == 'rgb_array':
