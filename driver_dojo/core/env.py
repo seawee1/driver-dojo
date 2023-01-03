@@ -202,7 +202,8 @@ class DriverDojoEnv(gym.Env):
             return self.renderer.get_image(global_view=True)
 
     def close(self):
-        self.renderer.close()
+        if self.renderer is not None:
+            self.renderer.close()
         self.sumo_engine.close()
 
     def _action_loop(self, action):

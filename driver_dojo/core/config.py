@@ -284,7 +284,7 @@ class ObservationConfig:
     rvo_radius: float = 70.0  # RadiusVehicleObserver
     rvo_num_vehicles: int = 16
     rvo_speed_range: Tuple[float, float] = (0, 19.444)
-    rvo_accel_range: Tuple[int, int] = (-5, 5)
+    rvo_accel_range: Tuple[int, int] = (-13, 13)
     rvo_signals: bool = True
     rvo_context: bool = True
     wp_num: int = 5

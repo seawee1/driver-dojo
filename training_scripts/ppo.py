@@ -58,9 +58,9 @@ if __name__ == '__main__':
         rollout_fragment_length=512,
         horizon=300,
     )
-    config = config.rollouts(
-        num_rollout_workers=15,
-    )
+    # config = config.resources(
+    #     num_gpus=1,
+    # )
     config = config.callbacks(CustomCallback)
     config.model['framestack'] = False
 

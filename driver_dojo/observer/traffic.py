@@ -90,6 +90,13 @@ class TrafficObserver(BaseObserver):
         obs_padded = np.zeros_like(self.low, dtype=np.float64)  # Pad end with zeros
         obs_padded[:obs.shape[0]] = obs
         obs_padded = self._normalize_obs(obs_padded)  # Post-proc
+
+        # if np.any(obs_padded < self.low):
+        #     print(np.array(self.explain())[np.argwhere(obs_padded < self.low)])
+        #     print(obs_padded[np.argwhere(obs_padded < self.low)])
+        # if np.any(obs_padded > self.high):
+        #     print(np.array(self.explain())[np.argwhere(obs_padded > self.high)])
+        #     print(obs_padded[np.argwhere(obs_padded > self.high)])
         return obs_padded
 
     def explain(self):
