@@ -3,8 +3,6 @@ log
 .idea
 *.egg-info
 __pycache__
-driver_dojo/outputs
-media/generated_maps/*/*.net.xml
-media/generated_maps/*/*.xodr
 outputs
 plot_store
+.driver_dojo
