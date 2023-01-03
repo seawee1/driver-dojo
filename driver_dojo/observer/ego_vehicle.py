@@ -26,7 +26,7 @@ class EgoVehicleObserver(BaseObserver):
                 -np.inf,
                 steer_min,
                 veh_config.v_min,
-                veh_config.decel_max,
+                veh_config.decel_max - 5.0,
                 -np.pi,
                 -3.0
             ],
@@ -38,7 +38,7 @@ class EgoVehicleObserver(BaseObserver):
                 np.inf,
                 steer_max,
                 veh_config.v_max,
-                veh_config.accel_max,
+                veh_config.accel_max + 5.0,
                 np.pi,
                 3.0
             ],

@@ -29,7 +29,7 @@ if __name__ == '__main__':
         config.scenario.num_tasks = 1
         env = DriverDojoEnv(_config=config)
         from gym.wrappers import FrameStack, NormalizeObservation
-        env = NormalizeObservation(env, 5)
+        #env = NormalizeObservation(env, 5)
         return env
 
 
