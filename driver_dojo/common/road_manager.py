@@ -211,6 +211,12 @@ class RoadLaneJunctionGraph:
                             outgoing.is_part_route = True
                             break
 
+        # Remove possible dups in outgoing/incoming
+        for comp in [self.roads, self.lanes, self.junctions]:
+            for _, c in comp.items():
+                c.incoming = list(set(c.incoming))
+                c.outgoing = list(set(c.outgoing))
+
         # Create `route_partition`
         self.route_partition = RoadLaneJunctionGraphPartition(self)
 
@@ -228,10 +234,31 @@ class RoadLaneJunctionGraphPartition:
                 if road.junction is not None:
                     self.junctions[road.junction.name] = deepcopy(road.junction)
 
-        for road_id, road in graph.roads.items():
-            pass
-            # Filter out incoming/outgoing references to components only part of route
+        # Filter out incoming/outgoing references to components only part of route
+        for comp in [self.roads, self.lanes, self.junctions]:
+            for _, c in comp.items():
+                incoming_or = [x for x in c.incoming if x.is_part_route]
+                outgoing_or = [x for x in c.outgoing if x.is_part_route]
+                c.incoming = incoming_or
+                c.outgoing = outgoing_or
+
         self.shape: RoadShape
+
+    def get_nearest_lane(self, pos: np.ndarray):
+        from shapely.geometry import Point, LineString
+        min_d = 13371337  # TODO
+        closest_lane = None
+        ego_point = Point(pos)
+        for lane_id, lane in self.lanes.items():
+            d = LineString(lane.shape.shape).distance(ego_point)
+            if d < min_d:
+                min_d = d
+                closest_lane = lane
+        return closest_lane
+
+
+
+
 
 
 class StreetMap:

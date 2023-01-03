@@ -11,6 +11,7 @@ class DummyBasicScenario:
     def __init__(self, sumo_net, route_edges):
         self.sumo_net = sumo_net
         self.route_edges = route_edges
+        self.route = ['E0', 'E4']
 
 
 class TestStreetMap(unittest.TestCase):

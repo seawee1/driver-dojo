@@ -36,7 +36,9 @@ from driver_dojo.observer import (
     AvailableOptionsObserver,
     SubGoalObserver,
     BirdsEyeObserver,
-    RoadShapeLidarObserver, BaseObserver,
+    RoadShapeLidarObserver,
+    RoadObserver,
+    BaseObserver,
 )
 
 
@@ -249,6 +251,8 @@ class DriverDojoEnv(gym.Env):
                 o = AvailableOptionsObserver(*observer_args)
             elif obs_name == Observer.RoadShape:
                 o = RoadShapeLidarObserver(*observer_args, self.street_map)
+            elif obs_name == Observer.Road:
+                o = RoadObserver(*observer_args, self.street_map)
             else:
                 raise NotImplementedError
             observers.append(o)
@@ -361,7 +365,8 @@ class DriverDojoEnv(gym.Env):
         # Note: install via `pip install -e git://github.com/facebookresearch/visdom.git#egg=visdom` instead of `pip install visdom`
         first_step = self._time_step == self.config.simulation.steps_per_action
         if first_step:  # Log image of street network
-            map_im = np.rollaxis(self.renderer.get_image(global_view=True), 2)
+            #map_im = np.rollaxis()
+            map_im = self.renderer.get_image(global_view=True)
             opts = dict(
                 caption=f'road seed {self.scenario.net_seed}',
                 store_history=True,
@@ -376,7 +381,8 @@ class DriverDojoEnv(gym.Env):
         if not ((self._time_step - 1) % self.config.debug.step_period) == 0:  # Only log every x steps
             return
 
-        cur_im = np.rollaxis(self.renderer.get_image(), 2)  # Render current rendered scene
+        #cur_im = np.rollaxis( 2)  # Render current rendered scene
+        cur_im = self.renderer.get_image()
         self._vis.image(
             cur_im,
             win=f'Render, episode {self._episode_count}' if self.config.debug.visdom_split_episodes else 'render',
@@ -401,6 +407,8 @@ class DriverDojoEnv(gym.Env):
             obs_labels = observer.explain()
             xs = [obs[i] for i, x in enumerate(obs_labels) if x == 'x']
             ys = [obs[i] for i, x in enumerate(obs_labels) if x == 'y']
+            print(xs)
+            print(ys)
             rotations = [obs[i] for i, x in enumerate(obs_labels) if x == 'rotation']
 
             actor_pos = np.array([0, 0]) if relative_features else self.vehicle.location[:2]

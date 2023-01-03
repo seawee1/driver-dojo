@@ -262,11 +262,12 @@ class ObservationConfig:
         default_factory=lambda: [
             Observer.EgoVehicle,
             Observer.RadiusVehicle,
+            Observer.Road,
+            Observer.SubGoals,
             #Observer.AvailableOptions,
             #Observer.BirdsEye,
             #Observer.Waypoints,
-            Observer.SubGoals,
-            Observer.RoadShape,
+            #Observer.RoadShape,
         ]
     )
     # carla_observers: List[CarlaObserverConfig] = field(
@@ -278,10 +279,10 @@ class ObservationConfig:
     carla_observers: List[CarlaObserverConfig] = field(
         default_factory=lambda: []
     )
-    feature_scaling: Optional[FeatureScaling] = FeatureScaling.Standardize
+    feature_scaling: Optional[FeatureScaling] = None  #FeatureScaling.Standardize
     relative_to_ego: bool = True  # Compute x, y and angles relative to ego
     rvo_radius: float = 70.0  # RadiusVehicleObserver
-    rvo_num_vehicles: int = 15
+    rvo_num_vehicles: int = 16
     rvo_speed_range: Tuple[float, float] = (0, 19.444)
     rvo_accel_range: Tuple[int, int] = (-5, 5)
     rvo_signals: bool = True

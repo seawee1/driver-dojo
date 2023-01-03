@@ -28,7 +28,7 @@ class EgoVehicleObserver(BaseObserver):
                 veh_config.v_min,
                 veh_config.decel_max,
                 -np.pi,
-                -3.0,
+                -3.0
             ],
             dtype=np.float64,
         )
@@ -61,4 +61,4 @@ class EgoVehicleObserver(BaseObserver):
         return self._normalize_obs(obs)
 
     def explain(self):
-        return ['x', 'y', 'steer', 'velocity', 'accel', 'yaw']
+        return ['x', 'y', 'steer', 'velocity', 'accel', 'yaw', 'lane_position_lat']

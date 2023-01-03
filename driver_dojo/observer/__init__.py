@@ -7,4 +7,5 @@ from .available_options import AvailableOptionsObserver
 from .multi import MultiObserver
 from .sub_goal import SubGoalObserver
 from .road_shape_lidar import RoadShapeLidarObserver
-#from .carla_observer import CarlaCameraObserver
+from .road import RoadObserver
+

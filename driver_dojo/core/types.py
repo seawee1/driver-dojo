@@ -75,6 +75,7 @@ class Observer(Enum):
     Waypoints = "Waypoints"
     SubGoals = "SubGoals"
     RoadShape = "RoadShape"
+    Road = "Road"
     CarlaCamera = "CarlaCamera"
 
 

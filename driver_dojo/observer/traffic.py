@@ -93,5 +93,5 @@ class TrafficObserver(BaseObserver):
         return obs_padded
 
     def explain(self):
-        return ['x', 'y', 'rotation', 'velocity', 'acceleration', 'deceleration', 'distance', 'signal_0', 'signal_1', 'signal_2'] * self._num_vehicles
+        return ['x', 'y', 'rotation', 'velocity', 'acceleration', 'deceleration', 'distance', 'signal_0', 'signal_1', 'signal_2', 'cont_0', 'cont_1', 'cont_2', 'cont_3'] * self._num_vehicles
 
