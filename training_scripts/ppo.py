@@ -28,8 +28,8 @@ if __name__ == '__main__':
         config.scenario.num_traffic = 1
         config.scenario.num_tasks = 1
         env = DriverDojoEnv(_config=config)
-        #from gym.wrappers import FrameStack, NormalizeObservation
-        #env = FrameStack(env, 5)
+        from gym.wrappers import FrameStack, NormalizeObservation
+        env = NormalizeObservation(env, 5)
         return env
 
 
@@ -48,7 +48,8 @@ if __name__ == '__main__':
         kl_coeff=0.2,
     )
     config = config.environment(
-        env='custom_env'
+        env='custom_env',
+        disable_env_checking=True
     )
     config = config.framework(
         framework='torch',

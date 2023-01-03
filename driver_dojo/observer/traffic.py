@@ -70,10 +70,10 @@ class TrafficObserver(BaseObserver):
         obs[:, [0, 1]] = traffic_state.location[radius_mask][sort_mask][:, [0, 1]]
         obs[:, 2] = traffic_state.rotation[radius_mask][sort_mask][:, 1]
         obs[:, 3] = traffic_state.velocity[radius_mask][sort_mask]
-        #obs[:, 4] = traffic_state.accel[radius_mask][sort_mask]
-        #obs[:, 5] = traffic_state.decel[radius_mask][sort_mask]
-        obs[:, 4] = 0.0
-        obs[:, 5] = 0.0
+        obs[:, 4] = traffic_state.accel[radius_mask][sort_mask]
+        obs[:, 5] = traffic_state.decel[radius_mask][sort_mask]
+        # obs[:, 4] = 0.0
+        # obs[:, 5] = 0.0
         obs[:, 6] = dist
         if self._signals:
             traffic_signals = traffic_state.signals[radius_mask][sort_mask]
