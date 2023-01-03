@@ -295,6 +295,7 @@ class ObservationConfig:
     rs_opening_angle: int = 180  # Opening angle into vehicle heading direction
     rs_num_inter_per_ray: int = 3  # Return the n nearest intersection points per ray
     rs_ray_dist: float = 50.0  # Length of a ray-cast
+    inf_fix: bool = True
 
 
 @dataclass

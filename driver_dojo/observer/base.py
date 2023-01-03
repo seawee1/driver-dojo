@@ -48,6 +48,11 @@ class BaseObserver(ABC):
     def _create_observation_space(self, low=None, high=None, feature_scaling=None):
         low = self.low if low is None else low
         high = self.low if high is None else high
+
+        if self.config.observations.inf_fix:  # TODO
+            low = np.ones_like(low) * -np.inf
+            high = np.ones_like(high) * np.inf
+
         feature_scaling = self._obs_config.feature_scaling if feature_scaling is None else feature_scaling
         assert low is not None and high is not None
 
