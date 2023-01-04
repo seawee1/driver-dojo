@@ -1,5 +1,5 @@
 import sys
-sys.path.append("C:\\Users\\seegras\\Git\\PythonRobotics")  # TODO: This is ugly
+sys.path.append("/home/rith/Git/PythonRobotics")  # TODO: This is ugly
 
 from os.path import dirname as dirname
 from os.path import join as pjoin
