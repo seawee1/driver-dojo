@@ -371,6 +371,7 @@ class DriverDojoEnv(gym.Env):
             timeout=timeout,
             timeout_standing_still=timeout_standing_still,
             off_route=off_route,
+            distance_to_goal=distance_to_goal
         )
 
         return reward, done, info
