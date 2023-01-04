@@ -375,7 +375,6 @@ class DriverDojoEnv(gym.Env):
                 reward += (
                     reward_config.progress_reward * (self._last_progress - distance_to_goal) / self._max_dist_per_timestep
                 )
-                print(reward_config.progress_reward * (self._last_progress - distance_to_goal) / self._max_dist_per_timestep)
 
             if self.vehicle.velocity == 0.0:
                 reward += reward_config.stand_still_penalty
