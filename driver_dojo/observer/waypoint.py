@@ -47,7 +47,6 @@ class WaypointObserver(BaseObserver):
         xy_rel = xy - xy_ego
 
         dists = np.linalg.norm(xy_rel, axis=1)  # Distances
-        dists = np.clip(dists, self.low[2], self.high[2])
 
         angles = utils.wrap_to_pi(np.arctan2(xy_rel[:, 1], xy_rel[:, 0]))  # Match angles
         match_angles = utils.wrap_to_pi(angles - angle)

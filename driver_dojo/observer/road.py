@@ -98,10 +98,11 @@ class RoadObserver(BaseObserver):
         obs = self._normalize_obs(obs)
 
         for i in none_mask:
-            obs[i*2] = 0.0
-            obs[i*2 + 1] = 0.0
+            obs[i*3] = 0.0
+            obs[i*3 + 1] = 0.0
+            obs[i*3 + 2] = 0.0
 
         return obs
 
     def explain(self):
-        return
+        return ['x', 'y', 'on_route'] * 9

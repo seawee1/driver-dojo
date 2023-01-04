@@ -71,8 +71,9 @@ class MultiObserver(BaseObserver):
     def step(self):
         for observer in self.obs_members['vector']:
             obs = observer.step()
-            obs_wrong = np.logical_or(obs < observer.low, obs > observer.high)
+            obs_wrong = np.logical_or(obs < observer.observation_space.low, obs > observer.observation_space.high)
             if np.any(obs_wrong):
+                print(obs[obs_wrong])
                 print(type(observer), np.array(observer.explain())[obs_wrong])
         obs = self._observe('step')
         # if np.any(obs_padded < self.low):

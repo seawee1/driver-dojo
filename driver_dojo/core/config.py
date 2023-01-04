@@ -281,10 +281,10 @@ class ObservationConfig:
     )
     feature_scaling: Optional[FeatureScaling] = FeatureScaling.Standardize
     relative_to_ego: bool = True  # Compute x, y and angles relative to ego
-    rvo_radius: float = 70.0  # RadiusVehicleObserver
+    rvo_radius: float = 50.0  # RadiusVehicleObserver
     rvo_num_vehicles: int = 16
     rvo_speed_range: Tuple[float, float] = (0, 19.444)
-    rvo_accel_range: Tuple[int, int] = (-13, 13)
+    rvo_accel_range: Tuple[int, int] = (-10, 10)
     rvo_signals: bool = True
     rvo_context: bool = True
     wp_num: int = 5
