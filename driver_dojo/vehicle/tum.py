@@ -86,10 +86,11 @@ class TUMVehicle(BaseVehicle):
             extent=self._state.extent,
             sumo_repr=False,
         )
-        if accel >= 0.0:
-            new_state.accel = accel
-        else:
-            new_state.decel = accel
+        new_state.accel = accel
+        # if accel >= 0.0:
+        #     new_state.accel = accel
+        # else:
+        #     new_state.decel = accel
 
         self.state = new_state
 

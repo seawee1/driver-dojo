@@ -388,9 +388,9 @@ class DriverDojoEnv(gym.Env):
         # Done
         done = timeout or timeout_standing_still or at_goal or off_route or ego_collided or driving_in_circles
         cost = int(timeout or timeout_standing_still or off_route or ego_collided or driving_in_circles)
-
-        if done:
-            assert cost == 1 or at_goal
+        #
+        # if done:
+        #     assert cost == 1 or at_goal
 
         # Info
         info = dict(

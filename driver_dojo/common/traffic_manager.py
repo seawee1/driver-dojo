@@ -34,7 +34,7 @@ class ActorState:
     velocity_max: float = None
     velocity_allowed: float = None  # TODO
     accel: float = None
-    decel: float = None
+    #decel: float = None
     accel_max: float = None
     decel_max: float = None
     signals: int = None
@@ -92,7 +92,7 @@ class ActorState:
         for attr_name in [
             'length', 'width', 'height',
             'velocity', 'velocity_lat',
-            'velocity_max', 'accel', 'decel',
+            'velocity_max', 'accel', #'decel',
             'accel_max', 'decel_max', 'extent'
         ]:
             setattr(s, attr_name, getattr(s, attr_name) - getattr(context_state, attr_name))
@@ -127,7 +127,7 @@ class TrafficState:
     velocity_min: np.ndarray
     velocity_max: np.ndarray
     accel: np.ndarray
-    decel: np.ndarray
+    #decel: np.ndarray
     accel_max: np.ndarray
     decel_max: np.ndarray
     signals: np.ndarray
@@ -346,7 +346,7 @@ class SUMOActor:
             velocity_min=None if self._state is None else self._state.velocity_min,  # We can't get this from SUMO engine
             velocity_max=results[traci.constants.VAR_MAXSPEED],
             accel=results[traci.constants.VAR_ACCELERATION],
-            decel=results[traci.constants.VAR_APPARENT_DECEL],
+            #decel=results[traci.constants.VAR_APPARENT_DECEL],
             accel_max=results[traci.constants.VAR_ACCEL],
             decel_max=results[traci.constants.VAR_DECEL],
             signals=results[traci.constants.VAR_SIGNALS],
@@ -438,8 +438,8 @@ class SUMOActor:
                 self.traci.vehicle.setMaxSpeed(self._actor_id, new_val_sumo)
             elif attr_name == 'accel':
                 self.traci.vehicle.setAcceleration(self._actor_id, new_val_sumo)
-            elif attr_name == 'decel':
-                self.traci.vehicle.setApparentDecel(self._actor_id, new_val_sumo)
+            # elif attr_name == 'decel':
+            #     self.traci.vehicle.setApparentDecel(self._actor_id, new_val_sumo)
             elif attr_name == 'accel_max':
                 self.traci.vehicle.setAccel(self._actor_id, new_val_sumo)
             elif attr_name == 'decel_max':

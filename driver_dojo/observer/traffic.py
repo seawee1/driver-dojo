@@ -19,15 +19,16 @@ class TrafficObserver(BaseObserver):
 
         vel_low, vel_high = self._obs_config.rvo_speed_range
         accel_low, accel_high = self._obs_config.rvo_accel_range
-        decel_low, decel_high = self._obs_config.rvo_accel_range
+        #decel_low, decel_high = self._obs_config.rvo_accel_range
         if self._relative_obs:
             x_low, y_low, x_high, y_high = [-self._radius] * 2 + [self._radius] * 2
             vel_low = -vel_high
+            accel_low = -accel_high
         else:
             x_low, y_low, x_high, y_high = -np.inf, -np.inf, np.inf, np.inf
 
-        low = [x_low, y_low, -np.pi, vel_low, accel_low, decel_low, 0.0]
-        high = [x_high, y_high, np.pi, vel_high, accel_high, decel_high, self._radius]
+        low = [x_low, y_low, -np.pi, vel_low, accel_low, 0.0]
+        high = [x_high, y_high, np.pi, vel_high, accel_high, self._radius]
 
         if self._signals:
             low += [0, 0, 0]
@@ -71,22 +72,22 @@ class TrafficObserver(BaseObserver):
         obs[:, 2] = traffic_state.rotation[radius_mask][sort_mask][:, 1]
         obs[:, 3] = traffic_state.velocity[radius_mask][sort_mask]
         obs[:, 4] = traffic_state.accel[radius_mask][sort_mask]
-        obs[:, 5] = traffic_state.decel[radius_mask][sort_mask]
+        #obs[:, 5] = traffic_state.decel[radius_mask][sort_mask]
         # obs[:, 4] = 0.0
         # obs[:, 5] = 0.0
-        obs[:, 6] = dist
+        obs[:, 5] = dist
         if self._signals:
             traffic_signals = traffic_state.signals[radius_mask][sort_mask]
-            obs[:, 7] = [(int(x) & 0b0001) / 0b0001 for x in traffic_signals]
-            obs[:, 8] = [(int(x) & 0b0010) / 0b0010 for x in traffic_signals]
-            obs[:, 9] = [(int(x) & 0b1000) / 0b1000 for x in traffic_signals]
+            obs[:, 6] = [(int(x) & 0b0001) / 0b0001 for x in traffic_signals]
+            obs[:, 7] = [(int(x) & 0b0010) / 0b0010 for x in traffic_signals]
+            obs[:, 8] = [(int(x) & 0b1000) / 0b1000 for x in traffic_signals]
         if self._context_info:
             veh_ids = traffic_state.veh_id[radius_mask][sort_mask]
             ego_context = self.traffic_manager.get_ego_context()
-            obs[:, 10] = [1 if x in ego_context['foes'] else 0 for x in veh_ids]
-            obs[:, 11] = [1 if x in ego_context['followers'] else 0 for x in veh_ids]
-            obs[:, 12] = [1 if x in ego_context['leaders'] else 0 for x in veh_ids]
-            obs[:, 13] = ~(obs[:, 10].astype(bool) | obs[:, 11].astype(bool) | obs[:, 12].astype(bool))
+            obs[:, 9] = [1 if x in ego_context['foes'] else 0 for x in veh_ids]
+            obs[:, 10] = [1 if x in ego_context['followers'] else 0 for x in veh_ids]
+            obs[:, 11] = [1 if x in ego_context['leaders'] else 0 for x in veh_ids]
+            obs[:, 12] = ~(obs[:, 10].astype(bool) | obs[:, 11].astype(bool) | obs[:, 12].astype(bool))
 
         obs = obs.flatten()
         obs_padded = np.zeros_like(self.low, dtype=np.float64)  # Pad end with zeros
@@ -103,5 +104,5 @@ class TrafficObserver(BaseObserver):
         return obs_padded
 
     def explain(self):
-        return ['x', 'y', 'rotation', 'velocity', 'acceleration', 'deceleration', 'distance', 'signal_0', 'signal_1', 'signal_2', 'cont_0', 'cont_1', 'cont_2', 'cont_3'] * self._num_vehicles
+        return ['x', 'y', 'rotation', 'velocity', 'acceleration', 'distance', 'signal_0', 'signal_1', 'signal_2', 'cont_0', 'cont_1', 'cont_2', 'cont_3'] * self._num_vehicles
 

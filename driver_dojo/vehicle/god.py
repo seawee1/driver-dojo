@@ -38,10 +38,12 @@ class GodVehicle(BaseVehicle):
         else:
             accel = 0.0
 
-        if accel >= 0.0:
-            state.accel = accel
-        else:
-            state.decel = accel
+        # if accel >= 0.0:
+        #     state.accel = accel
+        # else:
+        #     state.decel = accel
+        state.accel = accel
+
         state.velocity += accel * dt
         state.velocity = np.clip(state.velocity, self._veh_config.v_min, self._veh_config.v_max)
 
