@@ -12,12 +12,18 @@ class RoadObserver(BaseObserver):
         super().__init__(config, vehicle, traffic_manager)
         self._street_map = street_map
 
+        relative_features = self.config.observations.relative_to_ego
+        r_max_dist = self.config.observations.r_max_dist
         self.low = np.array(
             [
                 -np.inf,
                 -np.inf,
                 #-np.pi
                 0,
+            ] * 9 if not relative_features else [
+                -r_max_dist,
+                -r_max_dist,
+                0
             ] * 9,
             dtype=np.float64,
         )
@@ -25,8 +31,12 @@ class RoadObserver(BaseObserver):
             [
                 np.inf,
                 np.inf,
-                #np.pi
-                1,
+                #-np.pi
+                0,
+            ] * 9 if not relative_features else [
+                r_max_dist,
+                r_max_dist,
+                1
             ] * 9,
             dtype=np.float64,
         )
