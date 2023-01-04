@@ -297,7 +297,8 @@ class DriverDojoEnv(gym.Env):
         distance_to_goal = traci.vehicle.getDrivingDistance(
             self.config.simulation.egoID, goal_edgeID, goal_edge_length,
         )
-        at_goal = distance_to_goal < 10.0
+        at_goal = distance_to_goal < 20.0
+        #print(distance_to_goal)
 
         ego_collided = collision_detection.check_collision(self.config.simulation.egoID, self.traffic_manager)  # Collision
 
@@ -353,6 +354,7 @@ class DriverDojoEnv(gym.Env):
 
             # Sub-goal reward
             if len(self._last_sub_goals) > len(self.vehicle.sub_goals):
+                print("Yes!")
                 reward += reward_config.sub_goal_reward
 
         # Done

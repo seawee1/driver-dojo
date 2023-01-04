@@ -33,6 +33,8 @@ class BaseObserver(ABC):
         if not isinstance(obs, np.ndarray):
             obs = np.array(obs, dtype=np.float64)
 
+        obs = np.clip(obs, self.low, self.high)  # Clip into allowed range
+
         if self.inf_mask is None:  # We only need to do this once
             self.inf_mask = np.logical_and(self.low != -np.inf, self.high != np.inf)
 
