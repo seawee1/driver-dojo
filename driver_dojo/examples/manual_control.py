@@ -69,6 +69,10 @@ if __name__ == "__main__":
             sumo_gui=True,
             carla_gui=False,
             human_mode=True,
+        ),
+        scenario=dict(
+            traffic_init=False,
+            traffic_spawn=False,
         )
     )
     if "Sem" in env_name:
@@ -105,6 +109,7 @@ if __name__ == "__main__":
         im = env.render(mode='rgb_array')
         #print(im.shape)
         obs, reward, done, info = env.step(noop_action)
+        print(info)
 
         if done:
             obs = env.reset(mode='human')

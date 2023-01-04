@@ -54,8 +54,22 @@ class RoadObserver(BaseObserver):
                 none_mask.append(i)
                 continue
             p = nearest_point_on_lane(ego_point, lane_node)
-            obs[i*2] = p.x if not self.config.observations.relative_to_ego else p.x - ego_point.x
-            obs[i*2 + 1] = p.y if not self.config.observations.relative_to_ego else p.y - ego_point.y
+
+            if self.config.observations.relative_to_ego:
+                from driver_dojo.common import utils
+                theta = utils.wrap_to_pi(-self.vehicle.rotation[1]) + np.radians(90)
+                rot = np.array(
+                    [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
+                )
+                xy = np.array([p.x - ego_point.x, p.y - ego_point.y])
+                xy = np.dot(rot, xy.T).T
+                obs[i*2] = xy[0]
+                obs[i*2 + 1] = xy[1]
+            else:
+                obs[i*2] = p.x
+                obs[i*2 + 1] = p.y
+
+        print(obs)
 
         obs = self._normalize_obs(obs)
 
