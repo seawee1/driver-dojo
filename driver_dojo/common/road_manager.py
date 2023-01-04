@@ -32,6 +32,9 @@ class RoadShape:
     left_border: np.ndarray
     right_border: np.ndarray
 
+    def __post_init__(self):
+        self.polygon = np.array(list(self.left_border) + list(self.right_border[::-1]))
+
 
 class JunctionNode:
     def __init__(self, sumolib_obj):

@@ -317,8 +317,9 @@ class RewardConfig:
     goal_reward: float = 10.0
     sub_goal_reward: float = 5.0
     off_route_penalty: float = -10.0
-    speed_reward: float = 1.0
+    speed_reward: float = 0.1
     constant_reward: float = 0.0
+    progress_reward: float = 1.0
 
 
 @dataclass

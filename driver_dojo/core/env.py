@@ -1,5 +1,7 @@
 import sys
 
+import shapely.geometry.point
+
 from driver_dojo.core.carla_engine import CarlaEngine
 from driver_dojo.observer.carla import CarlaCameraObserver
 
@@ -94,6 +96,8 @@ class DriverDojoEnv(gym.Env):
         self._last_sub_goals: List = list()
         self._vis = None
         self._episode_count = -1
+        self._max_dist_per_timestep = self.config.simulation.dt * self.config.vehicle.v_max
+        self._last_progress = None
         self.render_mode = render_mode
         self.traci = None
 
@@ -144,6 +148,7 @@ class DriverDojoEnv(gym.Env):
         self._episode_count += 1
         self._standing_still_since = 0  # Used for 'standing still' timeout
         self._last_sub_goals = self.vehicle.sub_goals  # Used for reward calculation when consuming sub-goals
+        self._last_progress = None
         # self.traci.vehicle.subscribeContext('ego', traci.constants.CMD_GET_VEHICLE_VARIABLE, dist=50.0)
         # self.traci.vehicle.addSubscriptionFilterTurn(downstreamDist=100.0, foeDistToJunction=20.0)
         obs = self.observer.step()
@@ -181,6 +186,7 @@ class DriverDojoEnv(gym.Env):
 
         if self.config.debug.debug:
             self._debug_routine()
+
 
         obs = self.observer.step()
         reward, done, info = self._reward_done_info(self.scenario)
@@ -303,15 +309,30 @@ class DriverDojoEnv(gym.Env):
         ego_collided = collision_detection.check_collision(self.config.simulation.egoID, self.traffic_manager)  # Collision
 
         off_route = True
-        lanes = self.scenario.sumo_net.getNeighboringLanes(*self.vehicle.location[:2], 2.0)
-        if len(lanes) > 0:
-            for lane, dist in lanes:
-                if lane.getEdge().isSpecial():
-                    off_route = False
-                    break
-                elif lane.getEdge().getID() in self.scenario.route:
-                    off_route = False
-                    break
+        ego_point = shapely.geometry.point.Point(self.vehicle.location[:2])
+        for _, road_node in self.street_map.route_partition.roads.items():
+            road_poly = shapely.geometry.Polygon(road_node.shape.polygon)
+            if road_poly.contains(ego_point) or road_poly.distance(ego_point) < 0.2:
+                off_route = False
+                break
+        for _, junction_node in self.street_map.route_partition.junctions.items():
+            junction_poly = shapely.geometry.Polygon(junction_node.shape)
+            if junction_poly.contains(ego_point) or junction_poly.distance(ego_point) <= 1.0:
+                off_route = False
+                break
+
+
+
+        # off_route = True
+        # lanes = self.scenario.sumo_net.getNeighboringLanes(*self.vehicle.location[:2], 2.0)
+        # if len(lanes) > 0:
+        #     for lane, dist in lanes:
+        #         if lane.getEdge().isSpecial():
+        #             off_route = False
+        #             break
+        #         elif lane.getEdge().getID() in self.scenario.route:
+        #             off_route = False
+        #             break
 
         # Check if driving in circles
         driving_in_circles = False
@@ -349,20 +370,32 @@ class DriverDojoEnv(gym.Env):
                     * self.vehicle.velocity
                     / self.vehicle.velocity_max
             )
+
+            if self._last_progress is not None:
+                reward += (
+                    reward_config.progress_reward * (self._last_progress - distance_to_goal) / self._max_dist_per_timestep
+                )
+                print(reward_config.progress_reward * (self._last_progress - distance_to_goal) / self._max_dist_per_timestep)
+
             if self.vehicle.velocity == 0.0:
                 reward += reward_config.stand_still_penalty
 
             # Sub-goal reward
             if len(self._last_sub_goals) > len(self.vehicle.sub_goals):
-                print("Yes!")
                 reward += reward_config.sub_goal_reward
+
+        self._last_progress = distance_to_goal if self._last_progress is None else min(self._last_progress, distance_to_goal)
 
         # Done
         done = timeout or timeout_standing_still or at_goal or off_route or ego_collided or driving_in_circles
+        cost = int(timeout or timeout_standing_still or off_route or ego_collided or driving_in_circles)
+
+        if done:
+            assert cost == 1 or at_goal
 
         # Info
         info = dict(
-            cost=int(timeout or timeout_standing_still or off_route or ego_collided or driving_in_circles),
+            cost=cost,
             time_step=self._time_step,
             road_seed=scenario.net_seed,
             traffic_seed=scenario.traffic_seed,

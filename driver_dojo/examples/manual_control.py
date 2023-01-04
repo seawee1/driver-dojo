@@ -109,8 +109,8 @@ if __name__ == "__main__":
         im = env.render(mode='rgb_array')
         #print(im.shape)
         obs, reward, done, info = env.step(noop_action)
-        print(info)
-        print(reward)
+        #print(info)
+        #print(reward)
 
         if done:
             obs = env.reset(mode='human')
