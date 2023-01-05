@@ -8,8 +8,8 @@ setup(
     install_requires=[
         "gym",
         #"eclipse-sumo==1.15.0",  # Better to install it manually as we encountered some problems with pip installations.
-        "traci==1.14.1",
-        "sumolib==1.14.1",
+        "traci==1.15.0",
+        "sumolib==1.15.0",
         "matplotlib",
         "scikit-image",
         "shapely==1.8.1.post1",
@@ -21,25 +21,25 @@ setup(
         "psutil",
         "omegaconf",
         "ffmpeg-python",
-        "carla",
+        #"carla",
         "lxml",
         "visdom",
         "commonroad-vehicle-models",
-        "moviepy"
+        "pyglet==1.5.27"
     ],
-    extras_require={
-        "benchmark": [
-            "tianshou",
-            "hydra-core",
-            "torch",
-            "torchvision",
-            "torchaudio",
-            "tensorflow",
-            "tensorboard",
-            "pandas",
-            "seaborn",
-        ],
-    },
+    # extras_require={
+    #     "benchmark": [
+    #         "tianshou",
+    #         "hydra-core",
+    #         "torch",
+    #         "torchvision",
+    #         "torchaudio",
+    #         "tensorflow",
+    #         "tensorboard",
+    #         "pandas",
+    #         "seaborn",
+    #     ],
+    # },
     packages=find_packages(
         where="", include=["driver_dojo"], exclude=["data", "media", "tools"],
     ),

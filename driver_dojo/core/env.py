@@ -2,7 +2,8 @@ import sys
 
 import shapely.geometry.point
 
-from driver_dojo.core.carla_engine import CarlaEngine
+#from driver_dojo.core.carla_engine import CarlaEngine
+
 from driver_dojo.observer.carla import CarlaCameraObserver
 
 
@@ -84,8 +85,8 @@ class DriverDojoEnv(gym.Env):
         self.observer, self.carla_observers = observer_setup
         self.actions: BaseActions = self._setup_actions()
         self.carla_engine = None
-        if self.config.simulation.carla_co_simulation:
-            self.carla_engine: CarlaEngine = CarlaEngine(self.config, self.traffic_manager, self.carla_observers)
+        # if self.config.simulation.carla_co_simulation:  # TODO
+        #     self.carla_engine: CarlaEngine = CarlaEngine(self.config, self.traffic_manager, self.carla_observers)
 
         self.observation_space: np.ndarray = self.observer.observation_space  # TODO: rename to `.space` for clarity
         self.action_space: np.ndarray = self.actions.action_space
@@ -125,15 +126,15 @@ class DriverDojoEnv(gym.Env):
 
         self.scenario: BasicScenario = self.scenario_manager.step()  # Get new scenario
         self.traci = self.sumo_engine.reset(self.scenario)  # Load it into the SUMO engine
-        if self.config.simulation.carla_co_simulation:
-            self.carla_engine.reset(self.scenario)
+        # if self.config.simulation.carla_co_simulation:  # TODO
+        #     self.carla_engine.reset(self.scenario)
 
         self.traffic_manager.reset(self.traci)  # Reset the traffic state
         self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
         while self.config.simulation.egoID not in self.traffic_manager.actor_ids:  # Run simulation until ego was added
             self.sumo_engine.simulationStep()
-            if self.carla_engine is not None:
-                self.carla_engine.simulationStep()
+            # if self.carla_engine is not None:  # TODO
+            #     self.carla_engine.simulationStep()
             self.traffic_manager.step()
 
         self.street_map.reset(self.scenario)  # Reload lane-graph and stuff
@@ -203,9 +204,9 @@ class DriverDojoEnv(gym.Env):
         if mode == 'human':
             self.renderer.visible = True
         elif mode == 'rgb_array':
-            return self.renderer.get_image()
+            return np.moveaxis(self.renderer.get_image(), 0, 2)
         elif mode == 'rgb_array_map':
-            return self.renderer.get_image(global_view=True)
+            return np.moveaxis(self.renderer.get_image(global_view=True), 0, 2)
 
     def close(self):
         if self.renderer is not None:
@@ -216,8 +217,8 @@ class DriverDojoEnv(gym.Env):
         for i in range(self.config.simulation.steps_per_action):
             self.actions.step(action)  # Do the action
             self.sumo_engine.simulationStep()
-            if self.carla_engine is not None:
-                self.carla_engine.simulationStep()
+            # if self.carla_engine is not None:  # TODO
+            #     self.carla_engine.simulationStep()
             self.scenario.step(self.traci)  # Perform whatever events the scenario defines
             self.traffic_manager.step()  # Has to be stepped inside here, due to it being closely connected to SUMOEngine.simulationStep() for correct functioning
             self._time_step += 1

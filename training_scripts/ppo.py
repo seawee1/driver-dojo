@@ -73,7 +73,7 @@ if __name__ == '__main__':
         "PPO",
         run_config=RunConfig(
             stop=dict(
-                timesteps_total=10000000,
+                timesteps_total=100000000,
             ),
             verbose=1,
             checkpoint_config=air.CheckpointConfig(
