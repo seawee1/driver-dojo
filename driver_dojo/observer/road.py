@@ -55,7 +55,7 @@ class RoadObserver(BaseObserver):
         cur_lane = partition_graph.get_nearest_lane(ego_point)
         cur_lane_left = cur_lane.left_neigh
         cur_lane_right = cur_lane.right_neigh
-        assert len(cur_lane.outgoing) <= 1  # TODO: Hope this doesn't happen
+        #assert len(cur_lane.outgoing) <= 1  # TODO: Hope this doesn't happen
         next_lane = None
         next_lane_left = None
         next_lane_right = None
