@@ -91,34 +91,61 @@ class BasicScenario:
         self.task_rng = np.random.default_rng(task_seed)
 
         self._task = None if len(self._scenario_config.tasks) == 0 else self.task_rng.choice(self._scenario_config.tasks).lower()  # Draw the task
+        self._map_params = None
 
         self.sumocfg_path = self._scenario_base_path + '.sumocfg'
         self.sumo_net_path = self._scenario_base_path + '.net.xml'
         self.sumo_route_path = self._scenario_config.route_path  #self._scenario_base_path + '.rou.xml'  # TODO: ScenarioConfig `route_path` and SumoEngine include
         self.xodr_path = self._scenario_base_path + '.xodr'
         self._sumo_vType_dist_path = self._scenario_base_path + '.add.xml'
+        self._map_params_path = self._scenario_base_path + '.params.yaml'
 
         self.time_since_last_spawn = 0  # For BasicScenario.step()
         self.num_spawns = 0
-        self._is_valid = True
+
+        is_valid = False  # Generate a valid scenario
+        while not is_valid:
+            for path in [self.sumocfg_path, self.sumo_net_path, self.xodr_path, self._sumo_vType_dist_path, self._map_params_path]:
+                if os.path.isfile(path):
+                    os.remove(path)
+            is_valid = self.generate()
+
+        traffic_low, traffic_high = self._scenario_config.traffic_scale
+        self.traffic_scale = self.traffic_rng.uniform(traffic_low, traffic_high)
+
+        self._route_edges = None
+
+    def generate(self):
+        import pickle
+        if not os.path.isfile(self._map_params_path):
+            self._map_params = self.sample_map_params()
+            with open(self._map_params_path, 'wb') as f:
+                pickle.dump(self._map_params, f)
+        else:
+            with open(self._map_params_path, 'rb') as f:
+                self._map_params = pickle.load(f)
 
         if not os.path.isfile(self.sumo_net_path):  # In case we already generated this map at some point, pass
             self.generate_map()
-        self.task_specifics()
-        if not self.is_valid:
-            return
-        # if not os.path.isfile(self.xodr_path):  # TODO: convert function
+
+        try:
+            self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+        except Exception:
+            return False
+
+        task_realisable = self.task_specifics()
+        if not task_realisable:
+            return False
+        # if not os.path.isfile(self.xodr_path):  # TODO: convert function for Carla
         #     self.convert()
         if not os.path.isfile(self.sumocfg_path):
             write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
         if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
             self.create_vType_distribution()
+        return True
 
-        traffic_low, traffic_high = self._scenario_config.traffic_scale
-        self.traffic_scale = self.traffic_rng.uniform(traffic_low, traffic_high)
-
-        self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
-        self._route_edges = None
+    def sample_map_params(self):
+        return
 
     def task_specifics(self):
         return

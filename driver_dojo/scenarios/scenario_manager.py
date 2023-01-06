@@ -9,9 +9,9 @@ from driver_dojo.scenarios.intersection2 import IntersectionScenario  # TODO: De
 
 def create_scenario(q, lock, scenario_cls, scenario_args):  # Used for multi-threaded scenario generation
     scenario = scenario_cls(*scenario_args)
-    if scenario.is_valid:
-        with lock:
-            q.put(scenario)
+    #if scenario.is_valid:
+    with lock:
+        q.put(scenario)
 
 class ScenarioManager:
     def __init__(self, config):
@@ -60,14 +60,9 @@ class ScenarioManager:
                 next_scenario = self._scenario_queue.get(block=True)
                 return next_scenario
         else:
-            while True:
-                scenario_args = self._sample_scenario_args()
-                scenario_cls = IntersectionScenario  # TODO: Mapping to
-                scenario = scenario_cls(*scenario_args)
-                if scenario.is_valid:
-                    if no_ret:
-                        return
-                    return scenario
+            scenario_args = self._sample_scenario_args()
+            scenario_cls = IntersectionScenario  # TODO: Mapping to
+            scenario = scenario_cls(*scenario_args)
 
     def _start_new_threads(self):
         num_gen = self._scenario_config.generation_num_buffer - self._scenario_queue.qsize()  # How many left until buffer is full

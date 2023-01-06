@@ -28,7 +28,6 @@ class IntersectionScenario(BasicScenario):
             'rbl': None,
         }
 
-        self._is_valid = True
         self._node_name: str = 'main'  # TODO: make this more generic
         self._shape_step: float = 1.0
         self._nodes: Dict[str, Node] = {}
@@ -44,10 +43,6 @@ class IntersectionScenario(BasicScenario):
             task_seed,
         )
         assert self._task is not None  # We need this for Intersection
-
-    @property
-    def is_valid(self):
-        return self._is_valid
 
     @property
     def _junction_connections(self):
@@ -88,21 +83,19 @@ class IntersectionScenario(BasicScenario):
         # return route_edge_ids
 
     def generate_map(self):
-        map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
+        #map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
         #priorities = self._sample_edge_priorities(self.network_rng, map_params, self._from_edge, self._to_edge)
-        self._generate_map(map_params)  # Generate the map (.net.xml)
+        self._generate_map(self._map_params)  # Generate the map (.net.xml)
 
     def task_specifics(self):
-        map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
-        from_edges, to_edges = self._task_from_to_edges(map_params)  # Sample possible from/to edges, based on task
+        from_edges, to_edges = self._task_from_to_edges(self._map_params)  # Sample possible from/to edges, based on task
         if len(from_edges) == 0:
-            self._is_valid = False
-            return
-        self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+            return False
+
         self._route_candidates = self._filter_route_candidates(self.sumo_net, from_edges, to_edges)
         if len(self._route_candidates) == 0:
-            self._is_valid = False
-            return
+            return False
+        return True
 
     def _filter_route_candidates(self, sumo_net, from_edges, to_edges):
         required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
