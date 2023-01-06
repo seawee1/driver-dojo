@@ -92,6 +92,7 @@ class BasicScenario:
 
         self._task = None if len(self._scenario_config.tasks) == 0 else self.task_rng.choice(self._scenario_config.tasks).lower()  # Draw the task
         self._map_params = None
+        self.sumo_net = None
 
         self.sumocfg_path = self._scenario_base_path + '.sumocfg'
         self.sumo_net_path = self._scenario_base_path + '.net.xml'
@@ -103,48 +104,53 @@ class BasicScenario:
         self.time_since_last_spawn = 0  # For BasicScenario.step()
         self.num_spawns = 0
 
-        is_valid = False  # Generate a valid scenario
-        while not is_valid:
-            for path in [self.sumocfg_path, self.sumo_net_path, self.xodr_path, self._sumo_vType_dist_path, self._map_params_path]:
-                try:
-                    if os.path.isfile(path):
-                        os.remove(path)
-                except:
-                    pass
-            is_valid = self.generate()
+        import random
+        import string
+        str = ''
+        for i in range(10):
+            str += random.choice(string.ascii_uppercase + string.digits)
+        self.rnd_token = str
+
+        self.task_realisable = self.generate()
 
         traffic_low, traffic_high = self._scenario_config.traffic_scale
         self.traffic_scale = self.traffic_rng.uniform(traffic_low, traffic_high)
-
         self._route_edges = None
 
     def generate(self):
         import pickle
-        if not os.path.isfile(self._map_params_path):
-            self._map_params = self.sample_map_parameters(self.network_rng)
-            with open(self._map_params_path, 'wb') as f:
-                pickle.dump(self._map_params, f)
+        if not os.path.isfile(self._map_params_path) or not os.path.isfile(self.sumo_net_path):
+            while True:
+                self._map_params = self.sample_map_parameters(self.network_rng)
+                self.generate_map(self._map_params, self._scenario_base_path + self.rnd_token)
+
+                try:
+                    self.sumo_net = sumolib.net.readNet(self._scenario_base_path + self.rnd_token + '.net.xml', withInternal=True)  # Read the network for further processing
+                except Exception:
+                    continue
+
+                import shutil
+                shutil.copy(self._scenario_base_path + self.rnd_token + '.net.xml', self.sumo_net_path)
+                os.remove(self._scenario_base_path + self.rnd_token + '.net.xml')
+
+                write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+                if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
+                    self.create_vType_distribution()
+
+                with open(self._map_params_path, 'wb') as f:
+                    pickle.dump(self._map_params, f)
+
+                break
+
         if self._map_params is None:
             with open(self._map_params_path, 'rb') as f:
                 self._map_params = pickle.load(f)
 
-        if not os.path.isfile(self.sumo_net_path):  # In case we already generated this map at some point, pass
-            self.generate_map()
-
-        try:
+        if self.sumo_net is None:
             self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
-        except Exception:
-            return False
-
         task_realisable = self.task_specifics()
         if not task_realisable:
             return False
-        # if not os.path.isfile(self.xodr_path):  # TODO: convert function for Carla
-        #     self.convert()
-        if not os.path.isfile(self.sumocfg_path):
-            write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
-        if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
-            self.create_vType_distribution()
         return True
 
     def sample_map_params(self):

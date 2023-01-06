@@ -82,57 +82,7 @@ class IntersectionScenario(BasicScenario):
         # route_edge_ids = [x.getID() for x in optimal_routes[0]]
         # return route_edge_ids
 
-    def generate_map(self):
-        #map_params = list(self.sample_map_parameters(self.network_rng))  # Sample the map params
-        #priorities = self._sample_edge_priorities(self.network_rng, map_params, self._from_edge, self._to_edge)
-        self._generate_map(self._map_params)  # Generate the map (.net.xml)
-
-    def task_specifics(self):
-        from_edges, to_edges = self._task_from_to_edges(self._map_params)  # Sample possible from/to edges, based on task
-        if len(from_edges) == 0:
-            return False
-
-        self._route_candidates = self._filter_route_candidates(self.sumo_net, from_edges, to_edges)
-        if len(self._route_candidates) == 0:
-            return False
-        return True
-
-    def _filter_route_candidates(self, sumo_net, from_edges, to_edges):
-        required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
-        route_candidates = []
-        for conn in self._junction_connections:
-            if required_conn_state is None or conn.getState() == required_conn_state:
-                conn_from = int(conn.getFrom().getID().split('_')[0])
-                conn_to = int(conn.getTo().getID().split('_')[0])
-                real = False
-                for from_edge, to_edge in zip(from_edges, to_edges):
-                    if conn_from == from_edge and conn_to == to_edge:
-                        real = True
-                        break
-                if real:
-                    route_candidates.append((conn.getFrom().getID(), conn.getTo().getID()))
-        return route_candidates
-
-    def _netconvert_cmd(self, nodes_xml_path, edges_xml_path):
-        return [
-            'netconvert',
-            '-n',
-            nodes_xml_path,
-            '-e',
-            edges_xml_path,
-            '--junctions.corner-detail',
-            str(20),
-            '--junctions.internal-link-detail',
-            str(50),
-            '--no-turnarounds',
-            'true',
-            '--output-file',
-            self.sumo_net_path,
-            '--check-lane-foes.all',
-            'true'
-        ]
-
-    def _generate_map(self, params):
+    def generate_map(self, params, base_path):
         n_roads, n_lanes_in, n_lanes_out, road_sep, road_angles, t_inner, t_outer, airline_dist = params#, priorities = params
 
         node_type = 'right_before_left' if self._crossing_style == 'rbl' else 'priority'
@@ -161,11 +111,56 @@ class IntersectionScenario(BasicScenario):
                 shape = cloth.SampleXY(num_shape_samples)
                 self._edges[f'{i}_out'] = Edge(f'{i}_out', self._node_name, str(i), numLanes=n_lanes_out[i], shape=shape)#, priority=priorities[i])
 
-        nodes_xml_path, edges_xml_path, conns_xml_path = write_plain_xml(self._scenario_base_path, self._nodes.values(), self._edges.values(), conns=None)
+        nodes_xml_path, edges_xml_path, conns_xml_path = write_plain_xml(base_path, self._nodes.values(), self._edges.values(), conns=None)
         p = subprocess.Popen(
-            self._netconvert_cmd(nodes_xml_path, edges_xml_path)#, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+            self._netconvert_cmd(nodes_xml_path, edges_xml_path, base_path + '.net.xml')#, stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
         p.wait()
+
+    def task_specifics(self):
+        from_edges, to_edges = self._task_from_to_edges(self._map_params)  # Sample possible from/to edges, based on task
+        if len(from_edges) == 0:
+            return False
+
+        self._route_candidates = self._filter_route_candidates(self.sumo_net, from_edges, to_edges)
+        if len(self._route_candidates) == 0:
+            return False
+        return True
+
+    def _filter_route_candidates(self, sumo_net, from_edges, to_edges):
+        required_conn_state = self._crossing_style_to_conn_state[self._crossing_style]
+        route_candidates = []
+        for conn in self._junction_connections:
+            if required_conn_state is None or conn.getState() == required_conn_state:
+                conn_from = int(conn.getFrom().getID().split('_')[0])
+                conn_to = int(conn.getTo().getID().split('_')[0])
+                real = False
+                for from_edge, to_edge in zip(from_edges, to_edges):
+                    if conn_from == from_edge and conn_to == to_edge:
+                        real = True
+                        break
+                if real:
+                    route_candidates.append((conn.getFrom().getID(), conn.getTo().getID()))
+        return route_candidates
+
+    def _netconvert_cmd(self, nodes_xml_path, edges_xml_path, net_path):
+        return [
+            'netconvert',
+            '-n',
+            nodes_xml_path,
+            '-e',
+            edges_xml_path,
+            '--junctions.corner-detail',
+            str(20),
+            '--junctions.internal-link-detail',
+            str(50),
+            '--no-turnarounds',
+            'true',
+            '--output-file',
+            net_path,
+            '--check-lane-foes.all',
+            'true'
+        ]
 
     def sample_map_parameters(self, rng: np.random.Generator):
         def indices_with_lanes(n_lanes_lst):
