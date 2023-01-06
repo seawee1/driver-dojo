@@ -63,7 +63,7 @@ class ScenarioManager:
                 return next_scenario
         else:
             task_not_real = False
-            while task_not_real:
+            while not task_not_real:
                 scenario_args = self._sample_scenario_args()
                 scenario_cls = IntersectionScenario  # TODO: Mapping to
                 scenario = scenario_cls(*scenario_args)
