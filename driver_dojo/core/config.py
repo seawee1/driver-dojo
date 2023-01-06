@@ -153,7 +153,7 @@ class ScenarioConfig:
     traffic_vTypes: Optional[Tuple[str]] = None
     traffic_scale: Tuple[float, float] = tuple([0.4, 0.8])
     ego_vType: Optional[str] = None
-    generation_threading: bool = True
+    generation_threading: bool = False
     generation_num_threads: int = 4
     generation_num_buffer: int = 10
 
