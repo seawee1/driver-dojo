@@ -62,9 +62,15 @@ class ScenarioManager:
                 next_scenario = self._scenario_queue.get(block=True)
                 return next_scenario
         else:
-            scenario_args = self._sample_scenario_args()
-            scenario_cls = IntersectionScenario  # TODO: Mapping to
-            scenario = scenario_cls(*scenario_args)
+            task_not_real = False
+            while task_not_real:
+                scenario_args = self._sample_scenario_args()
+                scenario_cls = IntersectionScenario  # TODO: Mapping to
+                scenario = scenario_cls(*scenario_args)
+                task_not_real = scenario.task_realisable
+            if not no_ret:
+                return scenario
+
 
     def _start_new_threads(self):
         num_gen = self._scenario_config.generation_num_buffer - self._scenario_queue.qsize()  # How many left until buffer is full
