@@ -46,17 +46,35 @@ class ScenarioManager:
         return self._config.simulation.work_path, self._scenario_config, self._config.simulation, net_seed, traffic_seed, task_seed
 
     def step(self, no_ret=False) -> BasicScenario:
-        self._threads = [x for x in self._threads if x.is_alive()]
+        if self._config.scenario.generation_threading:
+            # Cleanup threads
+            for t in self._threads:  # Not sure if we need this though
+                if not t.is_alive():
+                    t.join()
+            self._threads = [x for x in self._threads if x.is_alive()]
+
+            # Start new threads
+            self._start_new_threads()
+
+            if not no_ret:
+                next_scenario = self._scenario_queue.get(block=True)
+                return next_scenario
+        else:
+            while True:
+                scenario_args = self._sample_scenario_args()
+                scenario_cls = IntersectionScenario  # TODO: Mapping to
+                scenario = scenario_cls(*scenario_args)
+                if scenario.is_valid:
+                    if no_ret:
+                        return
+                    return scenario
+
+    def _start_new_threads(self):
         num_gen = self._scenario_config.generation_num_buffer - self._scenario_queue.qsize()  # How many left until buffer is full
         max_start = self._scenario_config.generation_num_threads - len(self._threads)  # How many more threads can we start
         num_start = min(num_gen, max_start)
-
         for _ in range(num_start):
             scenario_args = self._sample_scenario_args()  # TODO: Map Config.ScenarioConfig.name to 'scenario' class
             t = Thread(target=create_scenario, args=(self._scenario_queue, self._lock, IntersectionScenario, scenario_args))
             t.start()
             self._threads.append(t)
-
-        if not no_ret:
-            next_scenario = self._scenario_queue.get(block=True)
-            return next_scenario
