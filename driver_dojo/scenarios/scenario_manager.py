@@ -53,7 +53,7 @@ class ScenarioManager:
             for i, t in enumerate(self._threads):  # Not sure if we need this though
                 if not t.is_alive():
                     t.join()
-                del_idx.append(i)
+                    del_idx.append(i)
             for i, j in enumerate(del_idx):
                 del self._currently_running_net_seeds[j-i]
 
