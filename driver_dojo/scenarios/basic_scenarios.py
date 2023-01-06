@@ -121,10 +121,10 @@ class BasicScenario:
     def generate(self):
         import pickle
         if not os.path.isfile(self._map_params_path):
-            self._map_params = self.sample_map_params()
+            self._map_params = self.sample_map_parameters(self.network_rng)
             with open(self._map_params_path, 'wb') as f:
                 pickle.dump(self._map_params, f)
-        else:
+        if self._map_params is None:
             with open(self._map_params_path, 'rb') as f:
                 self._map_params = pickle.load(f)
 
