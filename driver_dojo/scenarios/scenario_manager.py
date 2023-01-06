@@ -38,6 +38,7 @@ class ScenarioManager:
         traffic_seed = self._traffic_seed_sampler.integers(offset, self._num_traffics + offset)
         task_seed = self._task_seed_sampler.integers(offset, self._num_tasks + offset)
         if self._scenario_config.test_seeding:  # Allows for easy evaluating the agent on guaranteed disjunct test scenario set
+            import numpy as np
             max_int = np.iinfo(np.int_).max
             net_seed = self._network_seed_sampler.integers(self._num_networks + offset, max_int) if self._num_networks + offset < max_int else net_seed
             traffic_seed = self._traffic_seed_sampler.integers(self._num_traffics + offset, max_int) if self._num_traffics + offset < max_int else traffic_seed
