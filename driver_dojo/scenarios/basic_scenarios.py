@@ -106,8 +106,11 @@ class BasicScenario:
         is_valid = False  # Generate a valid scenario
         while not is_valid:
             for path in [self.sumocfg_path, self.sumo_net_path, self.xodr_path, self._sumo_vType_dist_path, self._map_params_path]:
-                if os.path.isfile(path):
-                    os.remove(path)
+                try:
+                    if os.path.isfile(path):
+                        os.remove(path)
+                except:
+                    pass
             is_valid = self.generate()
 
         traffic_low, traffic_high = self._scenario_config.traffic_scale
