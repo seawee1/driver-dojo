@@ -73,5 +73,4 @@ class ScenarioManager:
             scenario_args = self._sample_scenario_args()  # TODO: Map Config.ScenarioConfig.name to 'scenario' class
             t = Thread(target=create_scenario, args=(self._scenario_queue, self._lock, IntersectionScenario, scenario_args))
             t.start()
-            self._currently_running_net_seeds.append(scenario_args[3])
             self._threads.append(t)
