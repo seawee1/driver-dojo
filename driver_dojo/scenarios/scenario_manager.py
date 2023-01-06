@@ -26,7 +26,6 @@ class ScenarioManager:
         self._network_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
         self._traffic_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
         self._task_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
-        self._currently_running_net_seeds = []
 
         self._scenario_queue = Queue()
         self._threads = []
@@ -49,13 +48,9 @@ class ScenarioManager:
     def step(self, no_ret=False) -> BasicScenario:
         if self._config.scenario.generation_threading:
             # Cleanup threads
-            del_idx = []
             for i, t in enumerate(self._threads):  # Not sure if we need this though
                 if not t.is_alive():
                     t.join()
-                    del_idx.append(i)
-            for i, j in enumerate(del_idx):
-                del self._currently_running_net_seeds[j-i]
 
             self._threads = [x for x in self._threads if x.is_alive()]
 
@@ -76,8 +71,6 @@ class ScenarioManager:
         num_start = min(num_gen, max_start)
         for _ in range(num_start):
             scenario_args = self._sample_scenario_args()  # TODO: Map Config.ScenarioConfig.name to 'scenario' class
-            if scenario_args[3] in self._currently_running_net_seeds:
-                return
             t = Thread(target=create_scenario, args=(self._scenario_queue, self._lock, IntersectionScenario, scenario_args))
             t.start()
             self._currently_running_net_seeds.append(scenario_args[3])
