@@ -109,9 +109,9 @@ class ScenarioConfig:
     add_path: str = ''
     seed_offset: int = 0
     test_seeding: bool = False
-    num_maps: int = np.iinfo(np.int_).max  # `infinity` (kind of) in the default case
-    num_traffic: int = np.iinfo(np.int_).max
-    num_tasks: int = np.iinfo(np.int_).max
+    num_maps: int = 2147483647 # np.iinfo(np.int_).max  # `infinity` (kind of) in the default case
+    num_traffic: int = 2147483647 # np.iinfo(np.int_).max
+    num_tasks: int = 2147483647 # np.iinfo(np.int_).max
     behavior_dist: bool = False
     behavior_dist_num: int = 100
     behavior_dist_path: str = abspath(
