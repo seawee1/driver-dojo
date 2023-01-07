@@ -70,10 +70,10 @@ if __name__ == "__main__":
             carla_gui=False,
             human_mode=True,
         ),
-        scenario=dict(
-            traffic_init=False,
-            traffic_spawn=False,
-        )
+        # scenario=dict(
+        #     traffic_init=False,
+        #     traffic_spawn=False,
+        # )
     )
     if "Sem" in env_name:
         config['simulation']['keyboard_to_action'] = KEY_MAP_SEM
@@ -97,6 +97,9 @@ if __name__ == "__main__":
         print("A: Left-steer | D: Right-steer | W: Accelerate | S: Break")
     else:
         config['simulation']['keyboard_to_action'] = KEY_MAP_CONT
+        config['vehicle']=dict(
+            caster_effect=True,
+        )
         print("A: Left-steer | D: Right-steer | W: Accelerate | S: Break")
 
     # Overwrite based config with CLI arguments

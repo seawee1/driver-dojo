@@ -139,13 +139,13 @@ class ScenarioConfig:
     ego_init_position: Union[str, float] = '5.0'
     ego_init_lane: Union[str, float] = 'free'
     ego_init_speed: Union[str, float] = 'random'
-    traffic_init: bool = False
+    traffic_init: bool = True
     traffic_init_edges: Optional[Tuple[str]] = None
     traffic_init_edges_exclude: Optional[Tuple[str]] = None
     traffic_init_edges_exclude_ego: bool = True
     traffic_init_spread: float = 10.0
     traffic_init_params: Tuple[str, str, str] = ('random_free', 'best', 'random')  # departPos, departLane, departSpeed
-    traffic_spawn: bool = False
+    traffic_spawn: bool = True
     traffic_spawn_edges: Optional[Tuple[str]] = None
     traffic_spawn_edges_exclude: Tuple[str] = tuple()
     traffic_spawn_params: Tuple[str, str, str] = ('base', 'free', 'random')
