@@ -120,26 +120,29 @@ class BasicScenario:
     def generate(self):
         import pickle
         if not os.path.isfile(self._map_params_path) or not os.path.isfile(self.sumo_net_path):
+            tmp_base_path = self._scenario_base_path + self.rnd_token
             while True:
                 self._map_params = self.sample_map_parameters(self.network_rng)
-                self.generate_map(self._map_params, self._scenario_base_path + self.rnd_token)
+                self.generate_map(self._map_params, tmp_base_path)
 
                 try:
-                    self.sumo_net = sumolib.net.readNet(self._scenario_base_path + self.rnd_token + '.net.xml', withInternal=True)  # Read the network for further processing
+                    self.sumo_net = sumolib.net.readNet(tmp_base_path + '.net.xml', withInternal=True)  # Read the network for further processing
                 except Exception:
                     continue
 
                 import shutil
-                shutil.copy(self._scenario_base_path + self.rnd_token + '.net.xml', self.sumo_net_path)
-                os.remove(self._scenario_base_path + self.rnd_token + '.net.xml')
-
-                write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+                if not os.path.isfile(self.sumo_net_path):
+                    write_sumocfg(tmp_base_path + '.sumocfg', self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+                    shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
                 if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
-                    self.create_vType_distribution()
+                    self.create_vType_distribution(tmp_base_path + '.add.xml')
+                    shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)
+
+                shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
+                os.remove(tmp_base_path + '.net.xml')
 
                 with open(self._map_params_path, 'wb') as f:
                     pickle.dump(self._map_params, f)
-
                 break
 
         if self._map_params is None:
@@ -147,10 +150,14 @@ class BasicScenario:
                 self._map_params = pickle.load(f)
 
         if self.sumo_net is None:
-            self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+            try:
+                self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+            except:
+                return False
         task_realisable = self.task_specifics()
         if not task_realisable:
             return False
+
         return True
 
     def sample_map_params(self):
@@ -213,13 +220,13 @@ class BasicScenario:
                     self.num_spawns += 1
             self.time_since_last_spawn += self._sim_config.dt
 
-    def create_vType_distribution(self):
+    def create_vType_distribution(self, path):
         vType_command = [
             "python",
             self._scenario_config.vTypeDistribution_py_path,
             self._scenario_config.behavior_dist_path,
             "--output",
-            self._sumo_vType_dist_path,
+            path,
             "--name",
             "vehDist",
             "--seed",
