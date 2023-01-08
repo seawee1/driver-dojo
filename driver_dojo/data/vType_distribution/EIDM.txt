@@ -12,7 +12,7 @@ decel; normal(2.5, 2.0); [2.0,4.0]
 emergencyDecel; normal(2.5, 2.0); [3.0, 5.0]
 tau; normal(1.0, 0.5); [0.25, 2.0]
 impatience; normal(0.2,0.05); [0.1,0.3]
-latAlignment; arbitrary
+latAlignment; center
 
 carFollowModel; EIDM
 tpreview; normal(4.00,1.0); [2.0,6.0]

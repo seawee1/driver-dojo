@@ -215,6 +215,7 @@ class DriverDojoEnv(gym.Env):
 
     def _action_loop(self, action):
         for i in range(self.config.simulation.steps_per_action):
+            from ray.util import inspect_serializability
             self.actions.step(action)  # Do the action
             self.sumo_engine.simulationStep()
             # if self.carla_engine is not None:  # TODO

@@ -168,7 +168,10 @@ class BasicScenario:
     @property
     def sumo_add_path(self):
         if self._scenario_config.behavior_dist:
-            return self._scenario_config.add_path + ',' + self._sumo_vType_dist_path
+            if self._scenario_config.add_path != '':
+                return self._scenario_config.add_path + ',' + self._sumo_vType_dist_path
+            else:
+                return self._sumo_vType_dist_path
         return self._scenario_config.add_path
 
     @property

@@ -70,10 +70,11 @@ if __name__ == "__main__":
             carla_gui=False,
             human_mode=True,
         ),
-        # scenario=dict(
+        scenario=dict(
+            behavior_dist=True,
         #     traffic_init=False,
         #     traffic_spawn=False,
-        # )
+        )
     )
     if "Sem" in env_name:
         config['simulation']['keyboard_to_action'] = KEY_MAP_SEM

@@ -6,6 +6,25 @@ from os.path import join as pjoin
 from driver_dojo.scenarios.basic_scenarios import BasicScenario
 from driver_dojo.scenarios.intersection2 import IntersectionScenario  # TODO: Delete old 'intersection.py', rename new 'intersection2.py' scenario python file
 
+# class Queue:
+#     def __init__(self):
+#         self.queue = []
+#
+#     def get(self, block=True):
+#         import time
+#         while block and len(self.queue) == 0:
+#             time.sleep(1.0)
+#         if len(self.queue) == 0:
+#             return
+#         x = self.queue[0]
+#         self.queue = self.queue[1:]
+#         return x
+#
+#     def put(self, x):
+#         self.queue.append(x)
+#
+#     def qsize(self):
+#         return len(self.queue)
 
 def create_scenario(q, lock, scenario_cls, scenario_args):  # Used for multi-threaded scenario generation
     scenario = scenario_cls(*scenario_args)
