@@ -2,35 +2,18 @@ from threading import Thread, Semaphore
 from queue import Queue
 from gym.utils import seeding
 from os.path import join as pjoin
+import numpy as np
 
 from driver_dojo.scenarios.basic_scenarios import BasicScenario
 from driver_dojo.scenarios.intersection2 import IntersectionScenario  # TODO: Delete old 'intersection.py', rename new 'intersection2.py' scenario python file
 
-# class Queue:
-#     def __init__(self):
-#         self.queue = []
-#
-#     def get(self, block=True):
-#         import time
-#         while block and len(self.queue) == 0:
-#             time.sleep(1.0)
-#         if len(self.queue) == 0:
-#             return
-#         x = self.queue[0]
-#         self.queue = self.queue[1:]
-#         return x
-#
-#     def put(self, x):
-#         self.queue.append(x)
-#
-#     def qsize(self):
-#         return len(self.queue)
 
 def create_scenario(q, lock, scenario_cls, scenario_args):  # Used for multi-threaded scenario generation
     scenario = scenario_cls(*scenario_args)
     with lock:
         if scenario.task_realisable:
             q.put(scenario)
+
 
 class ScenarioManager:
     def __init__(self, config):
@@ -40,11 +23,11 @@ class ScenarioManager:
         self._num_networks = self._scenario_config.num_maps
         self._num_traffics = self._scenario_config.num_traffic
         self._num_tasks = self._scenario_config.num_tasks
-        self._test_seeding = self._scenario_config.test_seeding
+        self._test_seeding = self._scenario_config.seeding_mode
 
-        self._network_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
-        self._traffic_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
-        self._task_seed_sampler, _ = seeding.np_random(self._config.simulation.seed)
+        self._network_seed_sampler = np.random.default_rng(self._config.simulation.seed)
+        self._traffic_seed_sampler = np.random.default_rng(self._config.simulation.seed)
+        self._task_seed_sampler = np.random.default_rng(self._config.simulation.seed)
 
         self._scenario_queue = Queue()
         self._threads = []
@@ -52,16 +35,17 @@ class ScenarioManager:
         self.step(no_ret=True)  # Already start generation ahead of time, during environment init
 
     def _sample_scenario_args(self):
+        max_int = 2147483647  # np.iinfo(np.int_).max # Numpy max_int bigger than allowed max_int for SUMO engine seeding
         offset = self._scenario_config.seed_offset  # Draw scenario-specific seeds
         net_seed = self._network_seed_sampler.integers(offset, self._num_networks + offset)
         traffic_seed = self._traffic_seed_sampler.integers(offset, self._num_traffics + offset)
         task_seed = self._task_seed_sampler.integers(offset, self._num_tasks + offset)
-        if self._scenario_config.test_seeding:  # Allows for easy evaluating the agent on guaranteed disjunct test scenario set
-            import numpy as np
-            max_int = 2147483647  #np.iinfo(np.int_).max Changed because : numpy max_int bigger than SUMO engine max_int
-            net_seed = self._network_seed_sampler.integers(self._num_networks + offset, max_int) if self._num_networks + offset < max_int else net_seed
-            traffic_seed = self._traffic_seed_sampler.integers(self._num_traffics + offset, max_int) if self._num_traffics + offset < max_int else traffic_seed
-            task_seed = self._task_seed_sampler.integers(self._num_tasks + offset, max_int) if self._num_tasks + offset < max_int else task_seed
+        assert self._scenario_config.seeding_mode in ['train', 'test_maps', 'test_traffic']
+        if self._scenario_config.seeding_mode == 'test_maps':  # Allows for easy evaluating the agent on guaranteed disjunct test scenario set
+            net_seed = self._network_seed_sampler.integers(self._num_networks + offset, max_int)
+        elif self._scenario_config.seeding_mode == 'test_traffic':
+            traffic_seed = self._traffic_seed_sampler.integers(self._num_traffics + offset, max_int)
+            #task_seed = self._task_seed_sampler.integers(self._num_tasks + offset, max_int) if self._num_tasks + offset < max_int else task_seed
 
         return self._config.simulation.work_path, self._scenario_config, self._config.simulation, net_seed, traffic_seed, task_seed
 
@@ -71,7 +55,6 @@ class ScenarioManager:
             for i, t in enumerate(self._threads):  # Not sure if we need this though
                 if not t.is_alive():
                     t.join()
-
             self._threads = [x for x in self._threads if x.is_alive()]
 
             # Start new threads

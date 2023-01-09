@@ -108,7 +108,7 @@ class ScenarioConfig:
     route_path: str = ''
     add_path: str = ''
     seed_offset: int = 0
-    test_seeding: bool = False
+    seeding_mode: str = 'train'
     num_maps: int = 2147483647 # np.iinfo(np.int_).max  # `infinity` (kind of) in the default case
     num_traffic: int = 2147483647 # np.iinfo(np.int_).max
     num_tasks: int = 2147483647 # np.iinfo(np.int_).max

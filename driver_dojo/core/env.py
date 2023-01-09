@@ -122,7 +122,7 @@ class DriverDojoEnv(gym.Env):
         logging.info(OmegaConf.to_yaml(self.config))
 
     def reset(self, seed=None, **kwargs):
-        super().reset(seed=seed)
+        #super().reset()  # TODO: reset(seed=seed)
 
         self.scenario: BasicScenario = self.scenario_manager.step()  # Get new scenario
         self.traci = self.sumo_engine.reset(self.scenario)  # Load it into the SUMO engine
