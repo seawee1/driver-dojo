@@ -20,7 +20,18 @@ class IntersectionScenario(BasicScenario):
             task_seed,
     ):
 
-        self._crossing_style = scenario_config.kwargs['crossing_style'].lower()
+        super().__init__(
+            base_path,
+            scenario_config,
+            sim_config,
+            net_seed,
+            traffic_seed,
+            task_seed,
+            generate=False
+        )
+        assert self._task is not None  # We need this for Intersection
+
+        self._crossing_style = self.task_rng.choice(scenario_config.kwargs['crossing_style']).lower()
         assert self._crossing_style in ['major', 'minor', 'rbl']
         self._crossing_style_to_conn_state = {  # Defines the SUMO connection state (conn.getState()) that should be part of the ego route
             'major': 'M',
@@ -34,15 +45,7 @@ class IntersectionScenario(BasicScenario):
         self._edges: Dict[str, Edge] = {}
         self._route_candidates = []
 
-        super().__init__(
-            base_path,
-            scenario_config,
-            sim_config,
-            net_seed,
-            traffic_seed,
-            task_seed,
-        )
-        assert self._task is not None  # We need this for Intersection
+        self._generate_init()
 
     @property
     def _junction_connections(self):
@@ -220,6 +223,7 @@ class IntersectionScenario(BasicScenario):
                 for j in indices_with_lanes(n_lanes_out):
                     if i == j:
                         continue
+                    from driver_dojo.common.utils import wrap_to_pi
                     crossing_angle = np.abs(np.radians(180) - wrap_to_pi(road_angles[i] - road_angles[j]))
                     if crossing_angle < best_crossing_angle:
                         best_crossing_angle = crossing_angle

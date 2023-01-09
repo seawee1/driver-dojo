@@ -71,7 +71,7 @@ if __name__ == "__main__":
             human_mode=True,
         ),
         scenario=dict(
-            behavior_dist=True,
+            behavior_dist=False,
         #     traffic_init=False,
         #     traffic_spawn=False,
         )

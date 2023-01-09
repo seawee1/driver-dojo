@@ -78,6 +78,7 @@ class BasicScenario:
             net_seed,
             traffic_seed,
             task_seed,
+            generate=True,
     ):
         self._base_path = base_path
         self._sim_config = sim_config
@@ -103,7 +104,10 @@ class BasicScenario:
 
         self.time_since_last_spawn = 0  # For BasicScenario.step()
         self.num_spawns = 0
+        if generate:
+            self._generate_init()
 
+    def _generate_init(self):
         import random
         import string
         str = ''
