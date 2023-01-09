@@ -91,7 +91,11 @@ class BasicScenario:
         self.traffic_rng = np.random.default_rng(traffic_seed)
         self.task_rng = np.random.default_rng(task_seed)
 
-        self._task = None if len(self._scenario_config.tasks) == 0 else self.task_rng.choice(self._scenario_config.tasks).lower()  # Draw the task
+        import random
+
+        tasks = self._scenario_config.tasks  # Otherwise, with num_tasks set to 1, we would always sample the same task for every map
+        random.Random(self.net_seed).shuffle(tasks)
+        self._task = None if len(tasks) == 0 else self.task_rng.choice(tasks).lower()  # Draw the task
         self._map_params = None
         self.sumo_net = None
 

@@ -31,7 +31,10 @@ class IntersectionScenario(BasicScenario):
         )
         assert self._task is not None  # We need this for Intersection
 
-        self._crossing_style = self.task_rng.choice(scenario_config.kwargs['crossing_style']).lower()
+        import random
+        crossing_styles = scenario_config.kwargs['crossing_style']
+        random.Random(self.net_seed).shuffle(crossing_styles)
+        self._crossing_style = self.task_rng.choice(crossing_styles).lower()
         assert self._crossing_style in ['major', 'minor', 'rbl']
         self._crossing_style_to_conn_state = {  # Defines the SUMO connection state (conn.getState()) that should be part of the ego route
             'major': 'M',
