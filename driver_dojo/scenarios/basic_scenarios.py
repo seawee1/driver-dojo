@@ -145,10 +145,6 @@ class BasicScenario:
                     if not os.path.isfile(self.sumo_net_path):
                         write_sumocfg(tmp_base_path + '.sumocfg', self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
                         shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
-                    if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
-                        self.create_vType_distribution(tmp_base_path + '.add.xml')
-                        #shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)  # DUNNO!!!!
-                        self._sumo_vType_dist_path = tmp_base_path + '.add.xml'
 
                     shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
                     os.remove(tmp_base_path + '.net.xml')
@@ -160,6 +156,11 @@ class BasicScenario:
                     #with open(self._map_params_path, 'wb') as f:
                     #    pickle.dump(self._map_params, f)
                     break
+
+            if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
+                self.create_vType_distribution(tmp_base_path + '.add.xml')
+                #shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)  # DUNNO!!!!
+                self._sumo_vType_dist_path = tmp_base_path + '.add.xml'
 
         if self._map_params is None:
             with open(self._map_params_path, 'rb') as f:
