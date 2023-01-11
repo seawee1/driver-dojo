@@ -18,6 +18,7 @@ class IntersectionScenario(BasicScenario):
             net_seed,
             traffic_seed,
             task_seed,
+            lock,
     ):
 
         super().__init__(
@@ -27,6 +28,7 @@ class IntersectionScenario(BasicScenario):
             net_seed,
             traffic_seed,
             task_seed,
+            lock,
             generate=False
         )
         assert self._task is not None  # We need this for Intersection

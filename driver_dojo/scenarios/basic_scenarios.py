@@ -78,6 +78,7 @@ class BasicScenario:
             net_seed,
             traffic_seed,
             task_seed,
+            lock,
             generate=True,
     ):
         self._base_path = base_path
@@ -98,6 +99,7 @@ class BasicScenario:
         self._task = None if len(tasks) == 0 else self.task_rng.choice(tasks).lower()  # Draw the task
         self._map_params = None
         self.sumo_net = None
+        self._lock = lock
 
         self.sumocfg_path = self._scenario_base_path + '.sumocfg'
         self.sumo_net_path = self._scenario_base_path + '.net.xml'
@@ -138,20 +140,21 @@ class BasicScenario:
                 except Exception:
                     continue
 
-                import shutil
-                if not os.path.isfile(self.sumo_net_path):
-                    write_sumocfg(tmp_base_path + '.sumocfg', self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
-                    shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
-                if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
-                    self.create_vType_distribution(tmp_base_path + '.add.xml')
-                    shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)
+                with self._lock:
+                    import shutil
+                    if not os.path.isfile(self.sumo_net_path):
+                        write_sumocfg(tmp_base_path + '.sumocfg', self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+                        shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
+                    if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
+                        self.create_vType_distribution(tmp_base_path + '.add.xml')
+                        shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)
 
-                shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
-                os.remove(tmp_base_path + '.net.xml')
+                    shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
+                    os.remove(tmp_base_path + '.net.xml')
 
-                with open(tmp_base_path + '.pkl', 'wb') as f:
-                    pickle.dump(self._map_params, f)
-                shutil.copy(tmp_base_path + '.pkl', self._map_params_path)
+                    with open(tmp_base_path + '.pkl', 'wb') as f:
+                        pickle.dump(self._map_params, f)
+                    shutil.copy(tmp_base_path + '.pkl', self._map_params_path)
 
                 #with open(self._map_params_path, 'wb') as f:
                 #    pickle.dump(self._map_params, f)

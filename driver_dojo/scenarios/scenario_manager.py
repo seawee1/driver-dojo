@@ -1,4 +1,4 @@
-from threading import Thread #, Semaphore
+from threading import Thread, Semaphore
 from queue import Queue
 from gym.utils import seeding
 from os.path import join as pjoin
@@ -9,33 +9,9 @@ from driver_dojo.scenarios.intersection2 import IntersectionScenario  # TODO: De
 
 
 def create_scenario(q, lock, scenario_cls, scenario_args):  # Used for multi-threaded scenario generation
-    scenario = scenario_cls(*scenario_args)
-    #with lock:
+    scenario = scenario_cls(*scenario_args, lock)
     if scenario.task_realisable:
         q.put(scenario)
-
-
-# class Queue:
-#     def __init__(self):
-#         self.c = []
-#
-#     def put(self, x):
-#         self.c.append(x)
-#
-#     def get(self, block=False):
-#         if block:
-#             while len(self.c) == 0:
-#                 import time
-#                 time.sleep(1.0)
-#         if len(self.c) == 0:
-#             return
-#
-#         x = self.c[0]
-#         self.c = self.c[1:]
-#         return x
-#
-#     def qsize(self):
-#         return len(self.c)
 
 
 class ScenarioManager:
@@ -53,9 +29,9 @@ class ScenarioManager:
         self._task_seed_sampler = np.random.default_rng(self._config.simulation.seed)
 
         self._scenario_queue = None
-        self._threads = []
-        #self._lock = Semaphore()
         self._lock = None
+        self._threads = []
+        #self._lock = None
         self.step(no_ret=True)  # Already start generation ahead of time, during environment init
 
     def _sample_scenario_args(self):
@@ -77,10 +53,12 @@ class ScenarioManager:
         if self._config.scenario.generation_threading:
             if self._scenario_queue is None:
                 self._scenario_queue = Queue()
+                self._lock = Semaphore()
+
             # Cleanup threads
-            # for i, t in enumerate(self._threads):  # Not sure if we need this though
-            #     if not t.is_alive():
-            #         t.join()
+            for i, t in enumerate(self._threads):  # Not sure if we need this though
+                if not t.is_alive():
+                    t.join()
             self._threads = [x for x in self._threads if x.is_alive()]
 
             # Start new threads

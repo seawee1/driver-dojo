@@ -155,7 +155,7 @@ class ScenarioConfig:
     ego_vType: Optional[str] = None
     generation_threading: bool = True
     generation_num_threads: int = 4
-    generation_num_buffer: int = 10
+    generation_num_buffer: int = 20
 
 @dataclass
 class VehicleConfig:
