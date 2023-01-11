@@ -132,6 +132,7 @@ class DriverDojoEnv(gym.Env):
 
                 self.traffic_manager.reset(self.traci)  # Reset the traffic state
                 self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
+                print("Init scenario")
                 break
             except:
                 print("Error initializing scenario...")
