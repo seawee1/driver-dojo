@@ -133,7 +133,7 @@ class DriverDojoEnv(gym.Env):
                 self.traffic_manager.reset(self.traci)  # Reset the traffic state
                 self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
                 break
-            except traci.exceptions.TraCIException:
+            except:
                 print("Error initializing scenario...")
 
         while self.config.simulation.egoID not in self.traffic_manager.actor_ids:  # Run simulation until ego was added
