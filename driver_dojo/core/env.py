@@ -1,4 +1,4 @@
-import sys
+nimport sys
 
 import shapely.geometry.point
 
@@ -123,14 +123,19 @@ class DriverDojoEnv(gym.Env):
 
     def reset(self, seed=None, **kwargs):
         #super().reset()  # TODO: reset(seed=seed)
+        while True:
+            try:
+                self.scenario: BasicScenario = self.scenario_manager.step()  # Get new scenario
+                self.traci = self.sumo_engine.reset(self.scenario)  # Load it into the SUMO engine
+                # if self.config.simulation.carla_co_simulation:  # TODO
+                #     self.carla_engine.reset(self.scenario)
 
-        self.scenario: BasicScenario = self.scenario_manager.step()  # Get new scenario
-        self.traci = self.sumo_engine.reset(self.scenario)  # Load it into the SUMO engine
-        # if self.config.simulation.carla_co_simulation:  # TODO
-        #     self.carla_engine.reset(self.scenario)
+                self.traffic_manager.reset(self.traci)  # Reset the traffic state
+                self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
+                break
+            except traci.exceptions.TraCIException:
+                print("Error initializing scenario...")
 
-        self.traffic_manager.reset(self.traci)  # Reset the traffic state
-        self.scenario.initialize(self.traci)  # Initialize the scenario (some traci.vehicle.add calls in most cases)
         while self.config.simulation.egoID not in self.traffic_manager.actor_ids:  # Run simulation until ego was added
             self.sumo_engine.simulationStep()
             # if self.carla_engine is not None:  # TODO
