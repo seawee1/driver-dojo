@@ -147,7 +147,8 @@ class BasicScenario:
                         shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
                     if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
                         self.create_vType_distribution(tmp_base_path + '.add.xml')
-                        shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)
+                        #shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)  # DUNNO!!!!
+                        self._sumo_vType_dist_path = tmp_base_path + '.add.xml'
 
                     shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
                     os.remove(tmp_base_path + '.net.xml')
