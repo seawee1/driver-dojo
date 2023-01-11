@@ -72,6 +72,7 @@ if __name__ == "__main__":
         ),
         scenario=dict(
             behavior_dist=False,
+            generation_threading=False,
         #     traffic_init=False,
         #     traffic_spawn=False,
         )

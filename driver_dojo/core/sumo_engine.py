@@ -35,6 +35,8 @@ class SUMOEngine:
             "true",
             #'-v',
             #'true',
+            # "--xml-validation",
+            # "never"
             "--no-step-log",
             "true",
             "--step-length",

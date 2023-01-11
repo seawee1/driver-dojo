@@ -121,7 +121,11 @@ class IntersectionScenario(BasicScenario):
         p = subprocess.Popen(
             self._netconvert_cmd(nodes_xml_path, edges_xml_path, base_path + '.net.xml')#, stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        p.wait()
+        #p.wait()
+        import time
+        while p.poll() is None:
+            time.sleep(1.0)
+
 
     def task_specifics(self):
         from_edges, to_edges = self._task_from_to_edges(self._map_params)  # Sample possible from/to edges, based on task
