@@ -166,6 +166,8 @@ class IntersectionScenario(BasicScenario):
             str(20),
             '--junctions.internal-link-detail',
             str(50),
+            '--geometry.min-radius.fix',
+            'true',
             '--no-turnarounds',
             'true',
             '--output-file',
@@ -240,8 +242,8 @@ class IntersectionScenario(BasicScenario):
                     to_edge = j
 
             if from_edge is not None and to_edge is not None:
-                from_edges = [from_edge]
-                to_edges = [to_edge]
+                from_edges = []
+                to_edges = []
         else:
             raise ValueError("'IntersectionScenario' only supports 'r', 'l' or 's' as driving task specifications!")
 
