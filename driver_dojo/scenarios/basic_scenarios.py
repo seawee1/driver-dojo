@@ -149,8 +149,12 @@ class BasicScenario:
                 shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
                 os.remove(tmp_base_path + '.net.xml')
 
-                with open(self._map_params_path, 'wb') as f:
+                with open(tmp_base_path + '.pkl', 'wb') as f:
                     pickle.dump(self._map_params, f)
+                shutil.copy(tmp_base_path + '.pkl', self._map_params_path)
+
+                #with open(self._map_params_path, 'wb') as f:
+                #    pickle.dump(self._map_params, f)
                 break
 
         if self._map_params is None:
@@ -243,7 +247,10 @@ class BasicScenario:
             str(self._scenario_config.behavior_dist_num),
         ]
         p = subprocess.Popen(vType_command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        p.wait()
+        #p.wait()
+        while p.poll() is None:
+            import time
+            time.sleep(1.0)
 
     def init_traffic(self, spread, traci, excludes_extra=None):
         if excludes_extra is None:
