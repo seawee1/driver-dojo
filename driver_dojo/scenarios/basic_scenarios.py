@@ -249,7 +249,7 @@ class BasicScenario:
             "--size",
             str(self._scenario_config.behavior_dist_num),
         ]
-        p = subprocess.Popen(vType_command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        p = subprocess.Popen(vType_command)#, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         #p.wait()
         while p.poll() is None:
             import time
