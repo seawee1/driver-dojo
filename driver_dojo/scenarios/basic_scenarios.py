@@ -265,9 +265,14 @@ class BasicScenario:
         ]
         p = subprocess.Popen(vType_command)#, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         #p.wait()
+        waiting_since = 0.0
         while p.poll() is None:
+            if waiting_since > 10.0:
+                self.task_realisable = False
+                return
             import time
             time.sleep(1.0)
+            waiting_since += 1.0
 
     def init_traffic(self, spread, traci, excludes_extra=None):
         if excludes_extra is None:

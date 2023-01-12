@@ -58,9 +58,9 @@ class ScenarioManager:
 
             while self._scenario_queue.qsize() == 0:
                 # Cleanup threads
-                for i, t in enumerate(self._threads):  # Not sure if we need this though
-                    if not t.is_alive():
-                        t.join()
+                # for i, t in enumerate(self._threads):  # Not sure if we need this though
+                #     if not t.is_alive():
+                #         t.join()
                 self._threads = [x for x in self._threads if x.is_alive()]
 
                 # Start new threads
