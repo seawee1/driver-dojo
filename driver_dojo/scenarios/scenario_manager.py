@@ -65,6 +65,7 @@ class ScenarioManager:
 
                 # Start new threads
                 self._start_new_threads()
+                import time
                 time.sleep(2.0)
 
             if not no_ret:
