@@ -268,6 +268,7 @@ class BasicScenario:
         waiting_since = 0.0
         while p.poll() is None:
             if waiting_since > 10.0:
+                p.kill()
                 self.task_realisable = False
                 return
             import time
