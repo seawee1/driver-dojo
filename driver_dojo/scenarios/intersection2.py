@@ -124,9 +124,14 @@ class IntersectionScenario(BasicScenario):
             self._netconvert_cmd(nodes_xml_path, edges_xml_path, base_path + '.net.xml')#, stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
         #p.wait()
-        import time
+        waiting_since = 0.0
         while p.poll() is None:
+            if waiting_since > 10.0:
+                self.task_realisable = False
+                return
+            import time
             time.sleep(1.0)
+            waiting_since += 1.0
 
 
     def task_specifics(self):
