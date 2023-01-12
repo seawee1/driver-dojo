@@ -592,6 +592,18 @@ class DriverDojoEnv(gym.Env):
                 ),
                 win=f'CarlaObserver{i}'
             )
+    #
+    # def __getstate__(self):
+    #     self.sumo_label = self.sumo_engine.sumo_label
+    #     import dill
+    #     with open('test.pkl', 'wb') as f:
+    #         dill.dump(self, f)
+    #     return {'sumo_label': self.sumo_label}
+    #
+    # def __setstate__(self, state):
+    #     print('unpickling')
+    #     self.sumo_label = state['sumo_label']
+    #     dill.load_module(f'{self.sumo_label}.pkl')
 
     # def _calc_target_edge(self, startID, edgeIDs, strat):
     #     # TODO: I don't like this whole . Can definitely be implemented more nicely.

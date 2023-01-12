@@ -601,6 +601,14 @@ class TrafficManager:
         ret['leaders'] += [leader[0]] if leader is not None and leader[0] != '' else []
         return ret
 
+    # def __getstate__(self):
+    #     import cloudpickle
+    #     with open('sd', 'wb') as f:
+    #         for att in self.__dict__.keys():
+    #             for att2 in getattr(self, att).__dict__.keys():
+    #                 print(att2)
+    #                 cloudpickle.dump(getattr(getattr(self, att), att2), f)
+
 
 if __name__ == '__main__':
     actor_states = [ActorState(veh_id=f'actor{i}') for i in range(10)]

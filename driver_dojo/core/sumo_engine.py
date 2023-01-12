@@ -19,6 +19,7 @@ class SUMOEngine:
         # self._carla_process = None
         # self._additional_paths = ""
         self.traci = None
+        self.port = None
 
     def _get_command(self, scenario: BasicScenario) -> List[str]:
         # Have a look at https://manned.org/sumo-gui for more commandline arguments
@@ -88,6 +89,22 @@ class SUMOEngine:
 
         return sumo_cmd
 
+    def next_free_port(self, port=1024, max_port=65535):
+        import socket
+        import random
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        not_free = True
+        #while port <= max_port:
+        while not_free:
+            port = random.choice([x for x in range(port, max_port)])
+            try:
+                sock.bind(('', port))
+                sock.close()
+                return port
+            except OSError:
+                port += 1
+        return port
+
     def reset(self, scenario):
         if self.config.rendering.sumo_gui:
             sumo_binary = (
@@ -102,8 +119,10 @@ class SUMOEngine:
             )
 
         if not self._running:
+            #self.port = self.next_free_port()
             # Logging
             command_str = " ".join(self._get_command(scenario))
+            #command_str += f' --remote-port {self.port}'
             logging.info(f"Calling sumo with sumo commandline arguments:")
             for arg in self._get_command(scenario):
                 logging.info(arg)
@@ -132,6 +151,29 @@ class SUMOEngine:
                 f"Reset SUMO instance with label {self.sumo_label}..."
             )
         return self.traci
+
+    # def __getstate__(self):
+    #     #self.traci = None
+    #     #self.traci.traci = None
+    #
+    #     traci._connections = {}
+    #     self.traci._connections = {}
+    #     self.traci._socket = None
+    #     self.traci = None
+    #     # #print(self.traci._connections)
+    #     # for att in env.__dict__.keys():
+    #     #     print(att)
+    #     #     cloudpickle.dump(getattr(self, att), f)
+    #     state = self.__dict__.copy()
+    #     # for k in self.__dict__.keys():
+    #     #     print(k)
+    #
+    #     return state
+
+    #def __setstate__(self, state):
+    #    self.__dict__.update(state)
+    #    if self.port is not None:
+    #        self.traci = traci.connect(self.port)
 
     def close(self):
         # Closes the simulator
