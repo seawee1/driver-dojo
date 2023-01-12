@@ -32,7 +32,8 @@ class ScenarioManager:
         self._lock = None
         self._threads = []
         #self._lock = None
-        self.step(no_ret=True)  # Already start generation ahead of time, during environment init
+        if self._config.scenario.generation_threading:
+            self.step(no_ret=True)  # Already start generation ahead of time, during environment init
 
     def _sample_scenario_args(self):
         max_int = 2147483647  # np.iinfo(np.int_).max # Numpy max_int bigger than allowed max_int for SUMO engine seeding
