@@ -92,6 +92,8 @@ class BasicScenario:
         self.traffic_rng = np.random.default_rng(traffic_seed)
         self.task_rng = np.random.default_rng(task_seed)
 
+        self.rnd_token = None
+
         import random
 
         tasks = self._scenario_config.tasks  # Otherwise, with num_tasks set to 1, we would always sample the same task for every map
@@ -106,7 +108,7 @@ class BasicScenario:
         self.sumo_route_path = self._scenario_config.route_path  #self._scenario_base_path + '.rou.xml'  # TODO: ScenarioConfig `route_path` and SumoEngine include
         self.xodr_path = self._scenario_base_path + '.xodr'
         self._sumo_vType_dist_path = self._scenario_base_path + '.add.xml'
-        self._map_params_path = self._scenario_base_path + '.params.yaml'
+        self._map_params_path = self._scenario_base_path + '.pkl'
 
         self.time_since_last_spawn = 0  # For BasicScenario.step()
         self.num_spawns = 0
@@ -114,13 +116,12 @@ class BasicScenario:
             self._generate_init()
 
     def _generate_init(self):
-        import random
-        import string
-        str = ''
-        for i in range(10):
-            str += random.choice(string.ascii_uppercase + string.digits)
-        self.rnd_token = str
-
+        # import random
+        # import string
+        # str = ''
+        # for i in range(10):
+        #     str += random.choice(string.ascii_uppercase + string.digits)
+        # self.rnd_token = str
         self.task_realisable = self.generate()
 
         traffic_low, traffic_high = self._scenario_config.traffic_scale
@@ -129,42 +130,42 @@ class BasicScenario:
 
     def generate(self):
         import pickle
-        if self._lock is not None:
-            self._lock.acquire()
-        tmp_base_path = self._scenario_base_path + self.rnd_token
-        if not os.path.isfile(self._map_params_path) or not os.path.isfile(self.sumo_net_path):
-            while True:
-                self._map_params = self.sample_map_parameters(self.network_rng)
-                self.generate_map(self._map_params, tmp_base_path)
+        # if self._lock is not None:
+        #     self._lock.acquire()
+        #tmp_base_path = self._scenario_base_path + self.rnd_token
+        #if not os.path.isfile(self._map_params_path) or not os.path.isfile(self.sumo_net_path):
+        while True:
+            self._map_params = self.sample_map_parameters(self.network_rng)
+            self.generate_map(self._map_params, self._scenario_base_path)
 
-                try:
-                    self.sumo_net = sumolib.net.readNet(tmp_base_path + '.net.xml', withInternal=True)  # Read the network for further processing
-                except Exception:
-                    continue
+            try:
+                self.sumo_net = sumolib.net.readNet(self.sumo_net_path, withInternal=True)  # Read the network for further processing
+            except Exception:
+                continue
+            #
+            # import shutil
+            #if not os.path.isfile(self.sumo_net_path):
+            write_sumocfg(self.sumocfg_path, self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
+            #     shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
 
-                import shutil
-                if not os.path.isfile(self.sumo_net_path):
-                    write_sumocfg(tmp_base_path + '.sumocfg', self.sumo_net_path, self.sumo_route_path)  # TODO: copy scenario to this folder for static scenarios
-                    shutil.copy(tmp_base_path + '.sumocfg', self.sumocfg_path)
+            #shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
+            #os.remove(tmp_base_path + '.net.xml')
 
-                shutil.copy(tmp_base_path + '.net.xml', self.sumo_net_path)
-                os.remove(tmp_base_path + '.net.xml')
+            with open(self._map_params_path, 'wb') as f:
+                pickle.dump(self._map_params, f)
+            #shutil.copy(tmp_base_path + '.pkl', self._map_params_path)
 
-                with open(tmp_base_path + '.pkl', 'wb') as f:
-                    pickle.dump(self._map_params, f)
-                shutil.copy(tmp_base_path + '.pkl', self._map_params_path)
-
-                #with open(self._map_params_path, 'wb') as f:
-                #    pickle.dump(self._map_params, f)
-                break
+            #with open(self._map_params_path, 'wb') as f:
+            #    pickle.dump(self._map_params, f)
+            break
 
         if self._scenario_config.behavior_dist and not os.path.isfile(self._sumo_vType_dist_path):  # Initialize vType distribution
-            self.create_vType_distribution(tmp_base_path + '.add.xml')
+            self.create_vType_distribution(self._sumo_vType_dist_path)
             #shutil.copy(tmp_base_path + '.add.xml', self._sumo_vType_dist_path)  # DUNNO!!!!
-            self._sumo_vType_dist_path = tmp_base_path + '.add.xml'
+            #self._sumo_vType_dist_path = tmp_base_path + '.add.xml'
 
-        if self._lock is not None:
-            self._lock.release()
+        # if self._lock is not None:
+        #     self._lock.release()
 
         if self._map_params is None:
             with open(self._map_params_path, 'rb') as f:
@@ -210,7 +211,14 @@ class BasicScenario:
 
     @property
     def _scenario_base_path(self):
-        return os.path.join(self._base_path, self.name)
+        if self.rnd_token is None:
+            import random
+            import string
+            str = ''
+            for i in range(10):
+                str += random.choice(string.ascii_uppercase + string.digits)
+            self.rnd_token = str
+        return os.path.join(self._base_path, self.name + '_' + self.rnd_token)
 
     def initialize(self, traci):
         """Code that is run once the scenario is loaded into the SUMO engine.
