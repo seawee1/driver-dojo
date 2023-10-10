@@ -13,7 +13,7 @@ if __name__ == "__main__":
         del conf.env
     else:
         # Override this to change the environment
-        env_name = "DriverDojo/Sem-TPS-Intersection-v0"
+        env_name = "DriverDojo/Disc-KS-Intersection-v0"
 
     print(f"Testing performance under environment {env_name}...")
     print("Measuring environment creation time...")
@@ -35,8 +35,10 @@ if __name__ == "__main__":
         b = time.time()
         reset_times.append(b - a)
     print(f"    Mean reset time of {np.mean(reset_times)}s.\n")
+    env.close()
 
     print("Measuring environment stepping time...")
+    env = gym.make(env_name)
     step_times = []
     num_steps = 300
     for i in tqdm(range(10)):
@@ -45,15 +47,12 @@ if __name__ == "__main__":
         for t in range(num_steps):
             action = env.action_space.sample()
             obs, reward, done, info = env.step(action)
+            if done:
+                obs = env.reset()
         b = time.time()
         step_times.append(b - a)
     env.close()
     print(
-        f"    Mean time of {np.mean(step_times)}s for {num_steps} environment steps\n\
+        f"Mean time of {np.mean(step_times)}s for {num_steps} environment steps\n\
     -> ~{int(num_steps/np.mean(step_times))} steps/sec for single-threaded environment."
     )
-    print(
-        "Note that parallel environments for RL train will result in drastic computation speed-up!"
-    )
-
-    print("Done!")

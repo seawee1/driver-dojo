@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2022-07-19 11:35:04 by Eclipse SUMO netedit Version 1.13.0
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- Routes -->
+    <route id="route_ego" edges="33.0.00 -79.0.00 -10.0.00 -11.0.00 -39.0.00 -27.0.00 -67.0.00 -4.0.00 -25.0.00 33.0.00"/>
+    <!-- Vehicles, persons and containers (sorted by depart) -->
+    <vehicle id="ego" depart="0.00" route="route_ego"/>
+    <flow id="f_0" begin="0.00" departLane="best" departPos="0.00" departSpeed="random" from="90.0.00" to="-77.0.00" via="-34.0.00 -35.0.00" end="3600.00" probability="0.30"/>
+    <flow id="f_1" begin="0.00" departLane="best" departPos="0.00" departSpeed="random" from="-7.0.00" to="-31.0.00" via="-8.0.00 37.0.00 16.0.00" end="3600.00" vehsPerHour="1800.00"/>
+    <flow id="f_2" begin="0.00" departLane="best" departPos="0.00" departSpeed="random" from="31.0.00" to="-35.0.00" via="-26.0.00 -33.0.00" end="3600.00" probability="0.30"/>
+    <flow id="f_3" begin="0.00" departLane="best" departPos="0.00" departSpeed="random" from="-3.0.00" to="77.0.00" via="-4.0.00 78.0.00" end="3600.00" probability="0.50"/>
+    <flow id="f_5" begin="0.00" departLane="best" departPos="0.00" departSpeed="random" from="-78.0.00" to="7.0.00" via="4.0.00 67.0.00 8.0.00" end="3600.00" probability="0.40"/>
+</routes>

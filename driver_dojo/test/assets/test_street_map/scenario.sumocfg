@@ -1,0 +1,4 @@
+<configuration>
+    <net-file value="C:\Users\seegras\Git\driver-dojo\test\assets\test_street_map\net.net.xml"/>
+    <route-files value="C:\Users\seegras\Git\driver-dojo\test\assets\test_street_map\demand.rou.xml"/>
+</configuration>

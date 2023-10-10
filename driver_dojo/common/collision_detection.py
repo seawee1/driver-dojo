@@ -2,12 +2,9 @@ import shapely.geometry
 import shapely.affinity
 import numpy as np
 
-import driver_dojo.common.runtime_vars as runtime_vars
-
 
 class RotatedRect:
-    """A rotated rectangle. Used by the collision detection and the renderer."""
-
+    """A rotated rectangle. Used to detect collisions using the `shapely` Python package."""
     def __init__(self, cx, cy, w, h, angle):
         self.cx = cx
         self.cy = cy
@@ -28,47 +25,29 @@ class RotatedRect:
         return self.get_contour().intersection(other.get_contour())
 
 
-def check_collision():
+def check_collision(veh_id, traffic_manager):
     """Check for collisions between ego and non-ego vehicle."""
+    ego_id = veh_id
+    traffic_state = traffic_manager.traffic_state
+    ego_state = traffic_state[ego_id]
+    traffic_state = traffic_state.mask(ego_id)
 
-    dists = runtime_vars.traffic_manager.distance_to_ego
-    if dists is None:
+    dist = traffic_state.distances_to(ego_state)
+    radius_mask = np.argwhere(dist <= 20.0).flatten()
+    if dist.size == 0 or radius_mask.size == 0:
         return False
 
-    mask_radius = np.argwhere(dists <= 20.0).flatten()
-    if mask_radius.shape[0] == 0:
-        return False
+    traffic_state = traffic_state[radius_mask]
 
-    traffic_state = runtime_vars.traffic_manager.traffic_state_transformed()
-    traffic_state = traffic_state[mask_radius]
-
-    ego_state = runtime_vars.traffic_manager.ego_state_transformed
-    ego_rect = RotatedRect(
-        *ego_state("position"),
-        ego_state("width"),
-        ego_state("length"),
-        ego_state("angle")
-    )
-
-    index = runtime_vars.traffic_manager.index
-    for t in traffic_state:
-        traffic_rect = RotatedRect(
-            t[index["position"][0]],
-            t[index["position"][1]],
-            t[index["width"]],
-            t[index["length"]],
-            t[index["angle"]],
+    def create_rect(state):
+        return RotatedRect(
+            *state.location[:2],
+            state.width,
+            state.length,
+            state.rotation[1]
         )
-        if not ego_rect.intersection(traffic_rect).is_empty:
-            # Debug
-            # print('Traffic:', t[index["position"][0]], t[index["position"][1]], t[index["width"]], t[index["length"]], t[index["angle"]])
-            # print('Ego:', *ego_state("position"), ego_state("width"), ego_state("length"), ego_state("angle"))
-            # import matplotlib.pyplot as plt
-            # x, y = ego_rect.get_contour().exterior.xy
-            # plt.plot(x, y)
-            # x, y = traffic_rect.get_contour().exterior.xy
-            # plt.plot(x, y)
-            # plt.gca().set_aspect('equal', adjustable='box')
-            # plt.show()
-            return True
-    return False
+
+    ego_rect = create_rect(ego_state)
+    traffic_rects = list(map(create_rect, traffic_state))
+    inter = list(map(ego_rect.intersection, traffic_rects))
+    return not all([x.is_empty for x in inter])

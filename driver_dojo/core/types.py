@@ -43,7 +43,7 @@ class DynamicsModel(Enum):
     ST = "ST"
     STD = "STD"
     MB = "MB"
-    TPS = "TPS"
+    God = "God"
 
 
 class CarModel(Enum):
@@ -75,9 +75,16 @@ class Observer(Enum):
     Waypoints = "Waypoints"
     SubGoals = "SubGoals"
     RoadShape = "RoadShape"
+    Road = "Road"
+    CarlaCamera = "CarlaCamera"
 
 
 class ActionSpace(Enum):
     Continuous = "Continuous"
     Discretized = "Discretized"
     Semantic = "Semantic"
+
+
+class CarlaSensor(Enum):
+    RGBCamera = "RGBCamera"
+    DepthCamera = "DepthCamera"

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on Thu Sep 16 10:24:39 2021 by Eclipse SUMO netedit Version 1.9.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <sumo-net-file value="/Users/rith/Git/sumo-gym/maps/Town03/Town03.net.xml"/>
+    </input>
+
+    <output>
+        <output-file value="/Users/rith/Git/sumo-gym/maps/Town03/Town03.net.xml"/>
+    </output>
+
+    <processing>
+        <geometry.min-radius.fix.railways value="false"/>
+        <geometry.max-grade.fix value="false"/>
+        <offset.disable-normalization value="true"/>
+        <lefthand value="false"/>
+    </processing>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <junctions.limit-turn-speed value="5.5"/>
+        <rectangular-lane-cut value="true"/>
+    </junctions>
+
+    <pedestrian>
+        <walkingareas value="false"/>
+    </pedestrian>
+
+    <netedit>
+        <route-files value="/Users/rith/Git/sumo-gym/maps/Town03/Town03ICRA_AIDriverAtWork.rou.xml"/>
+    </netedit>
+
+    <report>
+        <aggregate-warnings value="5"/>
+    </report>
+
+</configuration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="DEFAULT_VEHTYPE" speedFactor="normc(0.70,1.00,0.40,2.00)" vClass="passenger" minGapLat="0.50" decel="3.00" apparentDecel="3.00"/>
+    <vType id="vType_0"/>
+    <vType id="vType_ego" minGap="0.00" speedFactor="normc(0.70,1.00,0.40,2.00)" vClass="passenger" minGapLat="0.50" decel="3.00" apparentDecel="3.00"/>
+    <route edges="33.0.00 -79.0.00 -10.0.00 -11.0.00 -39.0.00 -27.0.00 -67.0.00 3.0.00" color="yellow" id="route_ego"/>
+    <vehicle id="ego" depart="0.00" departPos="50.00" route="route_ego"/>
+    <flow id="flow_0" begin="0.00" color="red" from="4.0.00" to="20.0.00" end="3600.00" probability="0.30"/>
+    <flow id="flow_1" begin="0.00" departLane="4" arrivalLane="4" color="red" from="31.0.00" to="-31.0.00" end="3600.00" probability="0.40"/>
+    <flow id="flow_2" begin="0.00" color="red" from="-7.0.00" to="-31.0.00" via="37.0.00 -41.0.00 -10.0.00 16.0.00" end="3600.00" probability="0.40"/>
+    <flow id="flow_3" begin="0.00" color="red" from="4.0.00" to="-31.0.00" end="3600.00" probability="0.20"/>
+    <flow id="flow_4" begin="0.00" color="red" from="31.0.00" to="6.0.00" end="3600.00" probability="0.40"/>
+    <flow id="flow_5" begin="0.00" departLane="4" color="red" from="4.0.00" to="2.0.00" end="3600.00" probability="0.30"/>
+</routes>

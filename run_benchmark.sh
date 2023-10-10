@@ -1,0 +1,1 @@
+python -m driver_dojo.examples.benchmark.benchmark hydra.job.chdir=True hydra.run.dir=./outputs/${algo.name}_intersection_${env_train.simulation.seed_num_maps} algo=ppo_numeric env_name=DriverDojo/Sem-God-Intersection-v0 ++algo.params.test_num=null ++algo.params.seed=1337 ++env_train.simulation.seed_num_maps=1
