@@ -1,8 +1,6 @@
 # Driver Dojo: A Benchmark for Generalizable Reinforcement Learning for Autonomous Driving
 ![logo](./media/logo/logo.gif)
 
-**Announcement (2022-09-17): We are currently putting the finishing touches on Driver Dojo. Please stay tuned, we'll release an update very soon!**
-
 Driver Dojo is an autonomous driving environment for benchmarking reinforcement learning (RL) methods based on the popular [Simulation of Urban Mobility (SUMO)](https://www.eclipse.org/sumo/) platform. 
 It focuses on generalizability, meaning that we aim to provide means to develop, prototype, research and compare RL methods that are able to handle broad distributions of driving scenarios.
 For this, we provide randomization on the street network level, the task level (ego routing), and traffic level, where the latter encompasses traffic density, traffic initialization and routing, as well as driving personalities through sampling of unique physical, car-following, lane-change and junction model parameters on a per-vehicle basis.
